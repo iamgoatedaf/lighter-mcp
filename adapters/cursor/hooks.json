@@ -1,0 +1,19 @@
+{
+  "$schema": "https://cursor.sh/hooks.schema.json",
+  "version": 1,
+  "hooks": {
+    "afterToolCall": [
+      {
+        "match": {
+          "tool": "lighter_(live|funds)_*"
+        },
+        "command": "bash",
+        "args": [
+          "${workspaceRoot}/adapters/_shared/hooks/after-lighter-trade.sh"
+        ],
+        "timeoutMs": 2000,
+        "description": "Append a one-line audit summary to ~/.lighter/lighter-mcp/notifications.log and (on macOS) post a desktop notification after every live or funds tool call."
+      }
+    ]
+  }
+}

@@ -1,0 +1,93 @@
+---
+title: "Disclaimer"
+description: "Read this before flipping mode = live or mode = funds."
+---
+
+<Warning>
+Live orders and withdrawals on Lighter are **irreversible**. By using
+`mode = "live"` or `mode = "funds"` you accept full responsibility
+for the outcome of every trade, transfer, and withdrawal that the
+agent executes on your behalf.
+</Warning>
+
+## You are running an autonomous program
+
+Lighter MCP exposes Lighter trading to AI agents. AI agents are
+**probabilistic**:
+
+- They sometimes misinterpret instructions.
+- They sometimes hallucinate context.
+- They sometimes chain unrelated actions when they shouldn't.
+
+The safety gates in this server (mode allowlist, per-order cap, daily
+cap, leverage cap, two-step confirmation, allowlisted symbols) reduce
+blast radius — they do not eliminate it. **Treat this server like a
+partially-trusted automation, not a deterministic CLI.**
+
+## What this means in practice
+
+<CardGroup cols={2}>
+  <Card title="Set the smallest viable caps" icon="gauge">
+    Especially for the first session. Widen only after the round-trip
+    works on small notional.
+  </Card>
+  <Card title="Never disable confirmations carelessly" icon="key">
+    The two-step flow exists so you can read the plan back to yourself
+    before approving. Unless your upstream agent already enforces this
+    UX, leave `live.require_confirmation = true`.
+  </Card>
+  <Card title="Use the symbol allowlist" icon="filter">
+    A non-empty `live.allowed_symbols` is the strongest defense against
+    "wrong instrument" mistakes.
+  </Card>
+  <Card title="Watch the audit log" icon="scroll">
+    `tail -F ~/.lighter/lighter-mcp/audit.jsonl` while you're working
+    with the agent. Every gate decision and tool call is there.
+  </Card>
+</CardGroup>
+
+## No warranty
+
+Lighter MCP is provided **as-is** under the MIT license, with no
+warranty of any kind, express or implied, including but not limited
+to:
+
+- Fitness for any particular purpose.
+- Merchantability.
+- Continued compatibility with future versions of `lighter-agent-kit`
+  or the Lighter exchange.
+- Correctness of any safety check under all possible adversarial
+  inputs.
+
+You are responsible for evaluating the suitability of this software
+for your use case, for testing it on paper before going live, and for
+maintaining your own backups, audits, and compensating controls.
+
+## Not financial advice
+
+This software does not provide investment, financial, legal, or tax
+advice. AI agents using these tools may produce trading suggestions or
+execute trades, but those outputs are **not** advice and should not be
+relied upon as such.
+
+## Regulatory considerations
+
+Trading perpetuals / futures may not be legal in your jurisdiction.
+Lighter MCP makes no representation about the legality of using
+Lighter or this server in any specific country. You are responsible
+for ensuring you are compliant with all applicable laws.
+
+## Bugs happen
+
+Despite the test suite (53+ tests covering safety, confirmations,
+audit, schemas), bugs can and will happen. If you discover one that
+allows an agent to bypass a gate, **stop using the server immediately**
+and report it through the contact in
+[`SECURITY.md`](https://github.com/lighter-xyz/lighter-mcp/blob/main/SECURITY.md).
+
+## Final reminder
+
+> A typed schema and a confirmation token are not a substitute for
+> caring about how much money is at stake.
+
+Set caps. Read the plan. Approve deliberately.

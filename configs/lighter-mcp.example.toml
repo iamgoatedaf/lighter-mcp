@@ -1,0 +1,42 @@
+# Lighter MCP — example configuration.
+#
+# Default mode is "readonly" so this file is safe to ship. Live trading and
+# fund movements require explicit opt-in below.
+#
+# Save to one of:
+#   $LIGHTER_MCP_CONFIG
+#   ~/.lighter/lighter-mcp/config.toml
+# or pass via `lighter-mcp --config <path> stdio`.
+
+mode = "readonly"                         # one of: readonly, paper, live, funds
+
+# Path to a working lighter-agent-kit checkout. The MCP server shells into
+# this kit's pinned virtualenv and CLI scripts.
+kit_path = "/path/to/lighter-agent-kit"  # set by install.sh, or edit by hand
+
+# Override the kit's Python interpreter (defaults to <kit_path>/.venv/bin/python).
+# python_executable = "/usr/local/bin/python3.11"
+
+# Append-only audit log of every tool invocation.
+audit_log = "~/.lighter/lighter-mcp/audit.jsonl"
+
+# How long a confirmation_id stays valid (in seconds) for two-step writes.
+confirmation_ttl_s = 120
+
+# Lighter API host. Use the testnet host for development.
+host = "https://mainnet.zklighter.elliot.ai"
+# host = "https://testnet.zklighter.elliot.ai"
+
+[live]
+enabled = false
+allowed_symbols = ["BTC", "ETH", "SOL"]
+max_order_notional_usd = 100
+max_daily_notional_usd = 500
+max_leverage = 3
+require_confirmation = true
+
+[funds]
+transfers_enabled = false
+withdrawals_enabled = false
+max_withdrawal_usd = 0
+require_confirmation = true

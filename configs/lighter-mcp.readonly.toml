@@ -1,0 +1,5 @@
+# Read-only mode: only public reads and authenticated reads are exposed.
+mode = "readonly"
+kit_path = "/path/to/lighter-agent-kit"  # set by install.sh, or edit by hand
+audit_log = "~/.lighter/lighter-mcp/audit.jsonl"
+host = "https://mainnet.zklighter.elliot.ai"

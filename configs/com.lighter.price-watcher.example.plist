@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  launchd plist for the lighter-mcp price-alert watcher (macOS).
+
+  This is an example template. Replace `/Users/you` with your real
+  home folder before installing — launchd plists do not expand `~` or
+  `$HOME` (or use the matching $HOME-relative variants below).
+
+  Install:
+    cp configs/com.lighter.price-watcher.example.plist \
+       ~/Library/LaunchAgents/com.lighter.price-watcher.plist
+    # then edit the copy to point at your real paths
+    launchctl load -w ~/Library/LaunchAgents/com.lighter.price-watcher.plist
+
+  Stop / unload:
+    launchctl unload ~/Library/LaunchAgents/com.lighter.price-watcher.plist
+
+  Tail logs:
+    tail -f ~/.lighter/lighter-mcp/notifications.log
+    tail -f ~/.lighter/lighter-mcp/watcher.stdout.log
+    tail -f ~/.lighter/lighter-mcp/watcher.stderr.log
+
+  Edit alert thresholds in ~/.lighter/lighter-mcp/price-alerts.toml,
+  then `launchctl unload` + `launchctl load -w` to pick up the new
+  config.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.lighter.price-watcher</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/you/.lighter/lighter-mcp/.venv/bin/lighter-mcp</string>
+        <string>watch</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>LIGHTER_MCP_CONFIG</key>
+        <string>/Users/you/.lighter/lighter-mcp/config.toml</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>ThrottleInterval</key>
+    <integer>15</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/you/.lighter/lighter-mcp/watcher.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/you/.lighter/lighter-mcp/watcher.stderr.log</string>
+</dict>
+</plist>

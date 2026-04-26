@@ -1,0 +1,54 @@
+# ─── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# ─── Virtual envs ────────────────────────────────────────────────────────────
+.venv/
+venv/
+ENV/
+env/
+.python-version
+
+# ─── Build / packaging ───────────────────────────────────────────────────────
+build/
+dist/
+*.egg-info/
+*.egg
+pip-wheel-metadata/
+
+# ─── Test / lint caches ──────────────────────────────────────────────────────
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# ─── Editor / OS ─────────────────────────────────────────────────────────────
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ─── Local secrets / runtime state ───────────────────────────────────────────
+# These can be created if you run lighter-mcp directly inside the repo
+# instead of from ~/.lighter/lighter-mcp/.
+.env
+.envrc
+audit.jsonl
+notifications.log
+daily-notional.json
+daily-notional.json.corrupt
+*.local.toml
+config.local.toml
+
+# ─── User-specific ad-hoc demo scripts ───────────────────────────────────────
+/scratch/
+/tmp/

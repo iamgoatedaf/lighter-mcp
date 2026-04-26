@@ -1,0 +1,136 @@
+---
+title: "Your first paper trade"
+description: "Step-by-step: open a paper account, place a market order, and inspect the fill — all driven through your agent."
+---
+
+This walkthrough assumes:
+
+- `lighter-mcp doctor` returns `ok: true`.
+- Your agent (Cursor / Claude / Codex) is connected.
+- `mode = "paper"` in `~/.lighter/lighter-mcp/config.toml`.
+
+## 1. Initialize the paper account
+
+Ask the agent:
+
+> Initialize my Lighter paper account.
+
+Behind the scenes the agent calls:
+
+```jsonc
+{ "name": "lighter_paper_init" }
+```
+
+You'll see a starting balance (default `$10,000` USDC).
+
+## 2. Pick a market
+
+> What are the most liquid perps on Lighter right now?
+
+The agent calls `lighter_market_stats` (no symbol filter) and sorts by
+`volume_24h_usd`. Suppose it returns BTC, ETH, SOL.
+
+## 3. Inspect the order book
+
+> Show me the BTC top of book.
+
+```jsonc
+{ "name": "lighter_market_book", "arguments": { "symbol": "BTC", "limit": 5 } }
+```
+
+You should see five bids and five asks with prices and sizes.
+
+## 4. Place a paper market order
+
+> Go long 0.01 BTC at market on the paper account.
+
+```jsonc
+{
+  "name": "lighter_paper_market_order",
+  "arguments": { "symbol": "BTC", "side": "long", "amount": 0.01 }
+}
+```
+
+Response (approximate):
+
+```json
+{
+  "ok": true,
+  "fill_price": "67234.50",
+  "filled_base_amount": "0.01",
+  "fees_paid": "0.30",
+  "position_after": {
+    "size": "0.01",
+    "side": "long",
+    "avg_price": "67234.50"
+  }
+}
+```
+
+## 5. Verify the position
+
+> What positions do I have on paper right now?
+
+```jsonc
+{ "name": "lighter_paper_positions" }
+```
+
+You should see exactly one BTC long.
+
+## 6. Estimate the liquidation price
+
+> What's my liq price on this BTC long?
+
+```jsonc
+{ "name": "lighter_paper_liquidation_price", "arguments": { "symbol": "BTC" } }
+```
+
+## 7. Close it out
+
+> Close my BTC paper position with a market sell.
+
+```jsonc
+{
+  "name": "lighter_paper_market_order",
+  "arguments": { "symbol": "BTC", "side": "short", "amount": 0.01 }
+}
+```
+
+## 8. Inspect the audit log
+
+```bash
+tail -n 8 ~/.lighter/lighter-mcp/audit.jsonl | jq
+```
+
+You should see eight records: `paper_init`, `market_stats`,
+`market_book`, `paper_market_order`, `paper_positions`,
+`paper_liquidation_price`, `paper_market_order` (the close), and any
+extra reads the agent inserted.
+
+## What you've validated
+
+<CardGroup cols={2}>
+  <Card title="Tool catalog is correct" icon="list-check">
+    All paper tools registered as expected and the agent picked them.
+  </Card>
+  <Card title="Audit trail works" icon="scroll">
+    Every step is recorded with sanitized args.
+  </Card>
+  <Card title="Schemas accept your inputs" icon="square-check">
+    No Pydantic rejections for typical happy-path values.
+  </Card>
+  <Card title="Agent UX feels right" icon="hand">
+    You can describe trades in plain English and the agent maps them.
+  </Card>
+</CardGroup>
+
+## Where to next
+
+<CardGroup cols={2}>
+  <Card title="Guarded live order" icon="shield-check" href="/guides/guarded-live-order">
+    The same flow with the full preview→approve→execute cycle.
+  </Card>
+  <Card title="Funding scan" icon="chart-mixed" href="/guides/funding-scan">
+    Read-only scan of funding rates across symbols.
+  </Card>
+</CardGroup>

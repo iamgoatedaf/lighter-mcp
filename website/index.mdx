@@ -1,0 +1,105 @@
+---
+title: "Lighter MCP"
+sidebarTitle: "Introduction"
+description: "Trade Lighter from any MCP-capable AI agent — Cursor, Claude, Codex — with mode gates, two-step confirmations, notional caps, and a tamper-evident audit trail."
+mode: "wide"
+---
+
+<div className="not-prose flex flex-col gap-3 mt-8 mb-12">
+  <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
+    <span className="bg-gradient-to-r from-violet-500 via-fuchsia-400 to-violet-500 text-transparent bg-clip-text">Lighter&nbsp;MCP</span>
+  </h1>
+  <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">Safe, programmable trading for AI agents</h2>
+  <p className="text-lg text-zinc-400 max-w-2xl">
+    A Model Context Protocol server that wraps the official Lighter agent kit in mode-based safety gates,
+    Pydantic-validated inputs, and two-step confirmations for every fund-loss path.
+  </p>
+  <div className="flex flex-wrap gap-3 mt-2">
+    <a href="/get-started/quickstart" className="rounded-md bg-violet-600 hover:bg-violet-500 text-white font-medium px-5 py-2.5 transition">Quick start</a>
+    <a href="/get-started/what-is-lighter-mcp" className="rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-medium px-5 py-2.5 transition">What is Lighter MCP?</a>
+  </div>
+</div>
+
+<CardGroup cols={3}>
+  <Card title="Read-only tools" icon="chart-line" href="/tools/read">
+    Market stats, books, candles, funding, account info — 15 tools that never spend a satoshi.
+  </Card>
+  <Card title="Paper trading" icon="flask" href="/tools/paper">
+    Local simulator against live Lighter snapshots. Zero risk, full UX. 11 tools.
+  </Card>
+  <Card title="Live trading" icon="bolt" href="/tools/live">
+    Limit / market / modify / cancel / leverage / margin — gated by allowlists, caps, and confirmations.
+  </Card>
+  <Card title="Funds & withdrawals" icon="vault" href="/tools/funds">
+    Move and withdraw assets. Always two-step confirmed; capped per withdrawal.
+  </Card>
+  <Card title="Agent adapters" icon="plug" href="/adapters/overview">
+    Pre-built setup for Cursor, Claude Code, Claude Desktop, Codex, OpenClaw, and generic MCP clients.
+  </Card>
+  <Card title="Audit log" icon="scroll" href="/reference/audit-log">
+    Every call appended to JSONL with sanitized argv/result and an intra-process + POSIX file lock.
+  </Card>
+</CardGroup>
+
+## Why a wrapper, not the SDK directly?
+
+The kit is a CLI built for a human. Lighter MCP is the safety harness for a **non-human caller**.
+Every call is schema-validated, gate-checked, audited, and (for write paths) preview-confirmed
+**before** any subprocess runs against the exchange. The agent literally cannot reach the kit
+without going through these layers.
+
+<CardGroup cols={2}>
+  <Card title="Typed Pydantic schemas" icon="shield-check">
+    Symbol regex blocks shell metacharacters and CLI flag injection (`--side=long`) at the schema layer.
+  </Card>
+  <Card title="Mode-based catalog" icon="layer-group">
+    `readonly` → `paper` → `live` → `funds`. Higher-risk tools physically don't exist in the catalog until you opt in.
+  </Card>
+  <Card title="Atomic notional ledger" icon="coins">
+    UTC-keyed daily counter persists across restarts. Fail-safes to *cap exhausted* if its file is corrupt.
+  </Card>
+  <Card title="Two-step confirmations" icon="key">
+    First call returns a preview + single-use token bound to tool name + argument digest. TTL-limited.
+  </Card>
+</CardGroup>
+
+## Modes at a glance
+
+| Mode      | Reads | Paper | Live | Funds | Tools |
+| --------- | :---: | :---: | :--: | :---: | :---: |
+| `readonly`| ✅    | —     | —    | —     | 18    |
+| `paper`   | ✅    | ✅    | —    | —     | 29    |
+| `live`    | ✅    | ✅    | gated| —     | 37    |
+| `funds`   | ✅    | ✅    | gated| gated | 39    |
+
+`live` and `funds` additionally require explicit `[live]` / `[funds]`
+config blocks with allowlists, notional caps, leverage caps, and
+confirmation flags. See [Configuration](/get-started/configuration).
+
+## Install in 3 commands
+
+```bash
+git clone https://github.com/elliottech/lighter-agent-kit ~/lighter-agent-kit
+cd ~/lighter-agent-kit && bash install.sh
+
+git clone https://github.com/lighter-xyz/lighter-mcp
+bash lighter-mcp/install.sh --kit-path ~/lighter-agent-kit
+```
+
+That gives you a working `readonly` server. Promote to `paper`, `live`,
+or `funds` from the [Modes & safety](/get-started/modes-and-safety)
+guide.
+
+## Project status
+
+<Note>
+**Alpha (`0.1.0`).** The tool surface is stable enough to use, but
+expect schema-level breaking changes between minor versions until
+`1.0`. See the [CHANGELOG](https://github.com/lighter-xyz/lighter-mcp/blob/main/CHANGELOG.md).
+</Note>
+
+<Warning>
+Live orders and withdrawals on Lighter are **irreversible**. Read the
+[disclaimer](/security/disclaimer) before flipping `mode = "live"` or
+`mode = "funds"`.
+</Warning>

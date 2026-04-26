@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" fill="none">
+  <rect x="2" y="8" width="32" height="32" rx="8" fill="#7C3AED"/>
+  <path d="M11 16 L16 16 L16 32 L25 32 L25 36 L11 36 Z" fill="#FFFFFF"/>
+  <text x="46" y="32" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="700" fill="#0F172A">Lighter MCP</text>
+</svg>

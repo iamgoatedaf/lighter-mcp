@@ -1,0 +1,56 @@
+---
+description: Safety contract for the Lighter MCP server. Apply whenever a lighter_* tool is invoked.
+globs: []
+alwaysApply: false
+---
+
+# Lighter trading — safety contract
+
+When using the `lighter` MCP server, follow these rules.
+
+## Mode-aware behavior
+
+Call `lighter_safety_status` (or read `lighter_version`) before any
+non-trivial action and tell the user the active mode and remaining daily
+notional. Modes:
+
+- `readonly` — only read tools available.
+- `paper` — paper trading available; nothing real moves.
+- `live` — live writes available; treat outputs as irreversible.
+- `funds` — also enables transfers and withdrawals.
+
+If you receive a `category: "safety"` error envelope, do **not** retry with
+different arguments to bypass it. Surface the limit to the user verbatim and
+ask whether to relax the config.
+
+## Two-step confirmation
+
+`lighter_live_*` and `lighter_funds_*` tools use a preview/execute pattern:
+
+1. Call without `confirmation_id` first. The response has
+   `stage: "preview"`, a `plan` block, and a `confirmation_id`.
+2. Show the entire plan to the user (symbol, side, amount, estimated
+   notional, leverage, slippage, etc.). Ask explicit confirmation in plain
+   language before continuing.
+3. Only on explicit user approval, repeat the call with the **same**
+   arguments plus `confirmation_id` set to the issued token.
+
+Never invent a confirmation id, never reuse one across different actions,
+and never paraphrase the plan before reading it back to the user.
+
+## High-risk actions
+
+`lighter_live_close_all`, `lighter_live_cancel_all`, `lighter_funds_withdraw`,
+and `lighter_funds_transfer` are always treated as high-risk regardless of
+context. Surface every warning the preview emits.
+
+## Symbol handling
+
+Use perp symbols like `BTC`, `ETH`, `SOL` and spot pairs like `ETH/USDC`.
+Resolve ambiguous market references via `lighter_list_markets` rather than
+guessing.
+
+## Audit
+
+Every tool call is recorded to the audit log configured server-side. Do not
+attempt to suppress, edit, or pre-summarize calls that should be auditable.

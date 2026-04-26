@@ -1,0 +1,16 @@
+{
+  "name": "lighter-mcp-docs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mintlify documentation site for the Lighter MCP server. Requires `mint` CLI installed globally (npm i -g mint).",
+  "scripts": {
+    "dev": "mint dev",
+    "build": "mint build",
+    "broken-links": "mint broken-links",
+    "openapi-check": "mint openapi-check",
+    "update-cli": "mint update"
+  },
+  "engines": {
+    "node": ">=20.17.0"
+  }
+}

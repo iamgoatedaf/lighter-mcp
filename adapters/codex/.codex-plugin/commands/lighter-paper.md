@@ -1,0 +1,1 @@
+../../../_shared/commands/lighter-paper.md

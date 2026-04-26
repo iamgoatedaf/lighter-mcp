@@ -1,0 +1,78 @@
+---
+title: "Threat model"
+description: "Who and what Lighter MCP defends against, what it does not, and where you carry residual risk."
+---
+
+This page complements the repo's
+[`SECURITY.md`](https://github.com/lighter-xyz/lighter-mcp/blob/main/SECURITY.md).
+Read both before going `live` or `funds`.
+
+## What Lighter MCP defends against
+
+<CardGroup cols={2}>
+  <Card title="Prompt injection of CLI args" icon="shield-halved">
+    Pydantic regexes on `symbol`/`asset` reject shell metacharacters
+    and CLI flag prefixes (e.g. `--side=long`) at the schema layer
+    before any subprocess is spawned.
+  </Card>
+  <Card title="Catalog escalation" icon="ban">
+    Higher-risk tools physically don't exist in the catalog until you
+    promote the mode. An agent cannot call a tool that isn't registered.
+  </Card>
+  <Card title="Plan/execute drift" icon="signature">
+    Two-step confirmation tokens are bound to tool name + canonical-args
+    digest + TTL. The agent cannot show one plan and execute another.
+  </Card>
+  <Card title="Runaway notional" icon="gauge">
+    Per-order and rolling-daily caps. The daily counter is atomic and
+    fail-closed on corruption.
+  </Card>
+  <Card title="Symbol confusion" icon="filter">
+    `live.allowed_symbols` makes "trade ETH instead of BTC" explicit and
+    deniable.
+  </Card>
+  <Card title="Audit gaps" icon="scroll">
+    Every call (success or failure) is appended to JSONL with sanitized
+    argv/result. POSIX `flock` + intra-process lock prevent interleaving.
+  </Card>
+</CardGroup>
+
+## What it does not defend against
+
+<Warning>
+The MCP server is **not a substitute** for any of the following. Where
+you need these guarantees, layer them yourself.
+</Warning>
+
+| Threat                                              | Where it lives                                                     | Mitigation                                                                                       |
+| --------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| **Compromised local machine**                       | Your laptop / server.                                              | Keep credentials in `~/.lighter/lighter-agent-kit/credentials` with `chmod 600`. Use FDE.       |
+| **Hostile MCP client**                              | The agent runtime itself.                                          | Use first-party agents (Cursor, Claude, Codex). Don't pipe MCP through unaudited middleware.    |
+| **Compromised kit dependencies**                    | The kit's vendored SDK + signer.                                   | Pin the kit to a specific commit. Read its release notes before upgrading.                        |
+| **Network-level adversary**                         | Path between your machine and Lighter.                             | TLS by default (`https://`). Don't override `host` to plaintext.                                  |
+| **HTTP transport authentication**                   | `lighter-mcp serve --allow-remote`.                                | The server has **no built-in auth**. Front it with mTLS or an auth-enforcing reverse proxy.        |
+| **Audit log tampering**                             | Local filesystem.                                                  | Ship lines to a remote append-only sink (CloudWatch, Loki) via a sidecar if you need this.       |
+| **Replay of past confirmations**                    | TTL + single-use token.                                            | Default TTL 120s. Tokens are deleted on consume. Restart wipes in-memory state.                   |
+| **Adversarial price feed**                          | Lighter API or upstream pricing.                                   | The notional cap is your last line of defense; don't disable it.                                  |
+| **Bugs in `Safety` / `Confirmations` / write tools**| Code in this repo.                                                  | Tests are extensive but not infinite. Lower caps and per-symbol allowlists limit blast radius.    |
+
+## Defense-in-depth principles
+
+1. **Fail-closed on ambiguous state.** Missing price feed, corrupt
+   ledger file, mismatched confirmation token — all return errors,
+   never default-allow.
+2. **Least-privilege catalog.** Don't run in `funds` if you only need
+   `live`. Don't enable transfers if you only need withdrawals.
+3. **Smallest viable cap.** Always start with the smallest cap your
+   strategy can tolerate. Caps are the simplest and strongest defense
+   when other layers fail.
+4. **Trust the audit log, not the agent's narrative.** When something
+   feels off, read `audit.jsonl`. It's the only ground truth for what
+   actually happened.
+
+## Reporting issues
+
+Security disclosures go through `SECURITY.md` in the repo. Please
+**do not** open public issues for credential leakage, auth bypasses,
+or confirmation-token replays. Use the contact described in
+`SECURITY.md` instead.

@@ -1,0 +1,128 @@
+---
+title: "CLI"
+description: "lighter-mcp's command-line interface — stdio, serve, doctor, watch, version."
+---
+
+`lighter-mcp` is the single entrypoint installed by `pip install -e .`.
+All commands accept `--config <path>` to override the config file
+location.
+
+## Commands
+
+| Command  | Use for                                                                  |
+| -------- | ------------------------------------------------------------------------ |
+| `stdio`  | Default for local agents (Cursor, Claude Code, Codex). One process per agent. |
+| `serve`  | Streamable HTTP transport. For daemon use behind a reverse proxy.        |
+| `doctor` | Non-interactive smoke check (config load + kit health). Used by installers and CI. |
+| `watch`  | Run the price-alert watcher. Polls market stats and emits notifications. |
+| `version`| Print the version and exit.                                              |
+
+## `lighter-mcp stdio`
+
+```bash
+lighter-mcp stdio
+```
+
+Speaks MCP over stdio. Most agents start the process per-session and
+reattach on restart.
+
+## `lighter-mcp serve`
+
+```bash
+lighter-mcp serve --host 127.0.0.1 --port 8791
+```
+
+Runs Streamable HTTP. Refuses to bind on a non-loopback address unless
+`--allow-remote` is passed:
+
+<Warning>
+The MCP server has **no built-in auth**. Only set `--allow-remote`
+when fronting it with a TLS-terminating reverse proxy that enforces
+authentication (e.g. nginx + mTLS, Cloudflare Access, Tailscale ACLs).
+</Warning>
+
+```bash
+lighter-mcp serve --host 0.0.0.0 --port 8791 --allow-remote
+```
+
+Requires the optional `[http]` extras:
+
+```bash
+pip install -e ".[http]"
+```
+
+## `lighter-mcp doctor`
+
+```bash
+lighter-mcp doctor
+```
+
+Spawns a single subprocess (`query.py system status`), prints a JSON
+summary, and exits 0/1. Used by the installer at the end of `install.sh`
+and recommended for CI smoke checks.
+
+```json title="Output"
+{
+  "ok": true,
+  "mode": "readonly",
+  "kit_path": "/Users/you/lighter-agent-kit",
+  "host": "https://mainnet.zklighter.elliot.ai",
+  "audit_log": "/Users/you/.lighter/lighter-mcp/audit.jsonl",
+  "config_source": "/Users/you/.lighter/lighter-mcp/config.toml",
+  "system": { "code": 200, "status": "ok" }
+}
+```
+
+## `lighter-mcp watch`
+
+```bash
+lighter-mcp watch                 # daemon, polls forever
+lighter-mcp watch --once          # one-shot for cron / launchd
+lighter-mcp watch --alerts custom-alerts.toml
+```
+
+Polls `lighter_market_stats` and emits **edge-triggered** notifications
+when configured price thresholds cross.
+
+The alerts config defaults to `~/.lighter/lighter-mcp/price-alerts.toml`:
+
+```toml
+[[alert]]
+symbol = "BTC"
+condition = "above"
+threshold_usd = 70000
+
+[[alert]]
+symbol = "ETH"
+condition = "below"
+threshold_usd = 3000
+```
+
+See [Price alerts walkthrough](/guides/price-alerts) for the full
+notification setup (macOS notification center, Telegram, etc.).
+
+## `lighter-mcp version`
+
+Prints the package version. Useful in CI:
+
+```bash
+lighter-mcp version
+# 0.1.0
+```
+
+## Exit codes
+
+| Code | Meaning                                                                |
+| ---- | ---------------------------------------------------------------------- |
+| `0`  | Success.                                                               |
+| `1`  | Doctor reported `ok: false` (kit unreachable / health check failed).   |
+| `2`  | Config error (bad TOML, missing `kit_path`, invalid mode, etc.).       |
+
+## Environment
+
+| Env                    | Effect                                            |
+| ---------------------- | ------------------------------------------------- |
+| `LIGHTER_MCP_CONFIG`   | Path to the config file.                          |
+| `LIGHTER_KIT_PATH`     | Override `kit_path` (mostly CI / containers).     |
+| `LIGHTER_HOST`         | Override `host`.                                  |
+| `PYTHONUNBUFFERED`     | Forced to `1` so subprocess output is line-buffered. |

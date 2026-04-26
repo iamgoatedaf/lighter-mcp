@@ -1,0 +1,190 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Lighter MCP",
+  "description": "Portable Model Context Protocol server that exposes Lighter trading to any MCP-capable agent — Cursor, Claude, Codex, and more — with safety as a first-class concern.",
+  "colors": {
+    "primary": "#7C3AED",
+    "light": "#A78BFA",
+    "dark": "#5B21B6"
+  },
+  "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "/"
+  },
+  "appearance": {
+    "default": "dark"
+  },
+  "fonts": {
+    "heading": {
+      "family": "Inter"
+    },
+    "body": {
+      "family": "Inter"
+    }
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Disclaimer",
+        "href": "/security/disclaimer"
+      }
+    ],
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/lighter-xyz/lighter-mcp"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": [
+              "index",
+              "get-started/what-is-lighter-mcp",
+              "get-started/installation",
+              "get-started/quickstart",
+              "get-started/configuration",
+              "get-started/modes-and-safety"
+            ]
+          },
+          {
+            "group": "Agent adapters",
+            "pages": [
+              "adapters/overview",
+              "adapters/cursor",
+              "adapters/claude-code",
+              "adapters/claude-desktop",
+              "adapters/codex",
+              "adapters/openclaw",
+              "adapters/generic"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/first-paper-trade",
+              "guides/guarded-live-order",
+              "guides/funding-scan",
+              "guides/price-alerts"
+            ]
+          },
+          {
+            "group": "Security",
+            "pages": [
+              "security/threat-model",
+              "security/disclaimer"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Tools reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": ["tools/overview", "tools/diagnostics"]
+          },
+          {
+            "group": "Read-only tools",
+            "pages": ["tools/read"]
+          },
+          {
+            "group": "Paper trading",
+            "pages": ["tools/paper"]
+          },
+          {
+            "group": "Live trading",
+            "pages": ["tools/live"]
+          },
+          {
+            "group": "Funds & withdrawals",
+            "pages": ["tools/funds"]
+          }
+        ]
+      },
+      {
+        "tab": "Internals",
+        "groups": [
+          {
+            "group": "Architecture",
+            "pages": [
+              "reference/error-envelope",
+              "reference/safety",
+              "reference/confirmations",
+              "reference/audit-log"
+            ]
+          },
+          {
+            "group": "CLI",
+            "pages": ["reference/cli"]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "GitHub",
+          "href": "https://github.com/lighter-xyz/lighter-mcp",
+          "icon": "github"
+        },
+        {
+          "anchor": "Lighter exchange",
+          "href": "https://app.lighter.xyz",
+          "icon": "arrow-up-right-from-square"
+        },
+        {
+          "anchor": "Agent kit",
+          "href": "https://github.com/elliottech/lighter-agent-kit",
+          "icon": "toolbox"
+        }
+      ]
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/lighter-xyz/lighter-mcp",
+      "x": "https://x.com/lighter_xyz"
+    },
+    "links": [
+      {
+        "header": "Project",
+        "items": [
+          { "label": "GitHub", "href": "https://github.com/lighter-xyz/lighter-mcp" },
+          { "label": "Issues", "href": "https://github.com/lighter-xyz/lighter-mcp/issues" },
+          { "label": "Changelog", "href": "https://github.com/lighter-xyz/lighter-mcp/blob/main/CHANGELOG.md" }
+        ]
+      },
+      {
+        "header": "Reference",
+        "items": [
+          { "label": "Tools", "href": "/tools/overview" },
+          { "label": "CLI", "href": "/reference/cli" },
+          { "label": "Audit log", "href": "/reference/audit-log" }
+        ]
+      },
+      {
+        "header": "Safety",
+        "items": [
+          { "label": "Threat model", "href": "/security/threat-model" },
+          { "label": "Disclaimer", "href": "/security/disclaimer" }
+        ]
+      }
+    ]
+  },
+  "seo": {
+    "metatags": {
+      "og:type": "website",
+      "og:site_name": "Lighter MCP"
+    }
+  },
+  "search": {
+    "prompt": "Search docs..."
+  }
+}

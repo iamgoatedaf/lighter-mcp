@@ -1,0 +1,71 @@
+name: Bug report
+description: Something is broken in lighter-mcp.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please redact any
+        API keys, signatures, or account ids before posting.
+        For suspected security vulnerabilities, see SECURITY.md instead.
+
+  - type: input
+    id: version
+    attributes:
+      label: lighter-mcp version
+      description: Output of `lighter-mcp --version` or commit SHA.
+      placeholder: 0.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Active mode
+      options:
+        - readonly
+        - paper
+        - live
+        - funds
+    validations:
+      required: true
+
+  - type: input
+    id: agent
+    attributes:
+      label: Agent / client
+      description: Cursor 0.x, Claude Code, Codex, OpenClaw, generic MCP, etc.
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: |
+        Describe the unexpected behavior. Include the tool name and a
+        minimal reproduction if possible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: audit
+    attributes:
+      label: Relevant audit log line(s)
+      description: |
+        Paste the offending lines from `~/.lighter/lighter-mcp/audit.jsonl`,
+        with confirmation_id and account ids redacted if you wish.
+      render: json
+
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Python version, kit version/commit, network (mainnet / testnet).

@@ -1,0 +1,41 @@
+name: Feature request
+description: Suggest a new tool, safety gate, adapter, or example.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What workflow does the current toolkit make hard or impossible?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: |
+        New MCP tool? New slash-command? Tighter safety gate? Adapter for
+        a new agent surface? Sketch the interface.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you tried, or why an existing tool doesn't fit.
+
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk surface
+      description: Does the proposal touch funds, live writes, or only read paths?
+      options:
+        - read-only
+        - paper-only
+        - live
+        - funds (transfers / withdrawals)
+        - meta (docs, adapters, CI)
+    validations:
+      required: true

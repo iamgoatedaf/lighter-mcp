@@ -1,0 +1,22 @@
+# Live trading example. Copy, review, set narrow limits, then enable.
+# WARNING: live orders on Lighter are irreversible. Test on testnet first.
+
+mode = "live"
+kit_path = "/path/to/lighter-agent-kit"  # set by install.sh, or edit by hand
+audit_log = "~/.lighter/lighter-mcp/audit.jsonl"
+host = "https://mainnet.zklighter.elliot.ai"
+confirmation_ttl_s = 120
+
+[live]
+enabled = true
+allowed_symbols = ["BTC", "ETH"]
+max_order_notional_usd = 50
+max_daily_notional_usd = 200
+max_leverage = 3
+require_confirmation = true
+
+[funds]
+transfers_enabled = false
+withdrawals_enabled = false
+max_withdrawal_usd = 0
+require_confirmation = true

@@ -1,0 +1,27 @@
+{
+  "name": "lighter",
+  "displayName": "Lighter MCP",
+  "version": "0.2.0",
+  "description": "Lighter trading toolkit for Codex agents via MCP. Read-only, paper, and gated live trading with two-step confirmations, slash-commands, and a specialized lighter-trader sub-agent.",
+  "homepage": "https://lighter.xyz",
+  "license": "MIT",
+  "tags": ["trading", "lighter", "perpetuals", "defi", "mcp"],
+  "skills": ["./skills/lighter/SKILL.md"],
+  "mcp": "./.mcp.json",
+  "commands": [
+    { "name": "lighter-status",    "file": "./commands/lighter-status.md" },
+    { "name": "lighter-positions", "file": "./commands/lighter-positions.md" },
+    { "name": "lighter-kill",      "file": "./commands/lighter-kill.md" },
+    { "name": "lighter-paper",     "file": "./commands/lighter-paper.md" },
+    { "name": "lighter-audit",     "file": "./commands/lighter-audit.md" }
+  ],
+  "agents": [
+    { "name": "lighter-trader", "file": "./agents/lighter-trader.md" }
+  ],
+  "hooks": {
+    "postToolCall": {
+      "match": "lighter_(live|funds)_.*",
+      "script": "./hooks/after-lighter-trade.sh"
+    }
+  }
+}

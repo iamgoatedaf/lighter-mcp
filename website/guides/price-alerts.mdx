@@ -1,0 +1,126 @@
+---
+title: "Price alerts"
+description: "Run lighter-mcp watch to get edge-triggered notifications when prices cross configured thresholds."
+---
+
+The `lighter-mcp watch` command is a small daemon that polls
+`lighter_market_stats` and emits a notification when a price crosses
+a configured threshold. It's deliberately simple — no chart history,
+no candle aggregation; just a clean edge-triggered hook you can pipe
+anywhere.
+
+## Configure alerts
+
+Default file: `~/.lighter/lighter-mcp/price-alerts.toml`. Override with
+`--alerts <path>`.
+
+```toml
+poll_interval_s = 30
+notification_command = "/Users/you/bin/notify"
+
+[[alert]]
+symbol = "BTC"
+condition = "above"
+threshold_usd = 70000
+
+[[alert]]
+symbol = "ETH"
+condition = "below"
+threshold_usd = 3000
+
+[[alert]]
+symbol = "SOL"
+condition = "above"
+threshold_usd = 200
+cooldown_s = 1800     # don't re-fire within 30 minutes
+```
+
+| Key                   | Type    | Notes                                                                |
+| --------------------- | ------- | -------------------------------------------------------------------- |
+| `poll_interval_s`     | int     | Default `30`. Don't go below 10s — Lighter rate-limits.              |
+| `notification_command`| string  | Path to a script. Receives the alert payload as a JSON line on stdin. |
+| `alert.symbol`        | string  | Required.                                                            |
+| `alert.condition`     | enum    | `"above"` or `"below"`.                                               |
+| `alert.threshold_usd` | float   | Trigger price.                                                        |
+| `alert.cooldown_s`    | int     | Default `300`. Suppress re-firing for this long after a hit.          |
+
+## Run as a daemon
+
+```bash
+lighter-mcp watch
+```
+
+Output is line-buffered JSON:
+
+```json
+{"ts": 1782800400.0, "event": "fired", "symbol": "BTC", "condition": "above", "threshold_usd": 70000, "price_usd": 70123.45}
+{"ts": 1782800430.0, "event": "skip_cooldown", "symbol": "BTC"}
+```
+
+If `notification_command` is set, the daemon also pipes each `fired`
+event as a JSON line into that command. Useful patterns:
+
+<CodeGroup>
+```bash macOS notification center
+#!/bin/bash
+read -r line
+SYMBOL=$(echo "$line" | jq -r .symbol)
+PRICE=$(echo "$line" | jq -r .price_usd)
+osascript -e "display notification \"$SYMBOL @ \$$PRICE\" with title \"Lighter alert\""
+```
+
+```bash Telegram
+#!/bin/bash
+read -r line
+curl -s "https://api.telegram.org/bot$TG_TOKEN/sendMessage" \
+  -d chat_id="$TG_CHAT" \
+  -d text="$line"
+```
+
+```bash Slack
+#!/bin/bash
+read -r line
+curl -s -X POST "$SLACK_WEBHOOK" \
+  -H 'Content-Type: application/json' \
+  -d "{\"text\":$(jq -Rsa . <<<"$line")}"
+```
+</CodeGroup>
+
+## Run as a one-shot
+
+For cron / launchd:
+
+```bash
+lighter-mcp watch --once
+```
+
+Polls each alert exactly once and exits 0. Useful when you want a
+scheduler external to the process to drive cadence (e.g. cron every
+5 minutes).
+
+```cron
+*/5 * * * * /usr/local/bin/lighter-mcp watch --once
+```
+
+## State
+
+The daemon keeps last-fired timestamps in
+`~/.lighter/lighter-mcp/price-alerts-state.json` so cooldowns survive
+restarts. Delete the file to reset.
+
+## Edge-triggered, not level-triggered
+
+If BTC has been > $70 000 for an hour, the alert fires **once** when it
+first crosses, then stays quiet (subject to cooldown) until the price
+crosses back below the threshold. It will fire again next time it
+crosses upward. This avoids "BTC above $70 000" notifications every
+30 seconds.
+
+## Errors
+
+| Symptom                                       | Cause                                                | Fix                                                                  |
+| --------------------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------- |
+| `alerts config error: unknown key 'foo'`      | Typo in `price-alerts.toml`.                         | Match the schema above.                                              |
+| `alerts config error: condition must be ...`  | Bad `condition` value.                                | Use `"above"` or `"below"`.                                          |
+| Notifications never fire                      | `notification_command` script not executable.        | `chmod +x /path/to/script`; ensure it reads stdin.                   |
+| Polling errors flood logs                     | Lighter unreachable.                                 | `lighter-mcp doctor`; backoff is exponential up to 5 minutes.        |

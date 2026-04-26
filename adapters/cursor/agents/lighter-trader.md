@@ -1,0 +1,1 @@
+../../_shared/agents/lighter-trader.md

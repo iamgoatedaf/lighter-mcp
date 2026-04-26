@@ -1,0 +1,105 @@
+---
+title: "Funding rate scan"
+description: "Read-only walkthrough: scan funding rates across symbols and decide which side of the basis is paying."
+---
+
+A pure-read recipe for finding **where the funding income is** at any
+moment. Works in `readonly` mode — no credentials needed.
+
+## 1. Get the symbol catalog
+
+> List all perpetual markets on Lighter.
+
+```jsonc
+{ "name": "lighter_list_markets", "arguments": { "market_type": "perp" } }
+```
+
+Returns something like:
+
+```json
+[
+  { "symbol": "BTC", "market_index": 0, "market_type": "perp" },
+  { "symbol": "ETH", "market_index": 1, "market_type": "perp" },
+  { "symbol": "SOL", "market_index": 2, "market_type": "perp" },
+  { "symbol": "AVAX", "market_index": 3, "market_type": "perp" }
+]
+```
+
+## 2. Pull funding for each
+
+> For each of those, fetch the current funding rate.
+
+The agent calls `lighter_market_funding` per symbol. (Today, the kit
+returns funding per symbol; future versions may bulk-fetch.)
+
+```jsonc
+{ "name": "lighter_market_funding", "arguments": { "symbol": "BTC" } }
+{ "name": "lighter_market_funding", "arguments": { "symbol": "ETH" } }
+{ "name": "lighter_market_funding", "arguments": { "symbol": "SOL" } }
+{ "name": "lighter_market_funding", "arguments": { "symbol": "AVAX" } }
+```
+
+Each response is the API's normalized **8-hour-equivalent** rate, so
+they're comparable.
+
+## 3. Sort
+
+> Sort by funding rate (most negative first) so I see who pays the most
+> to short.
+
+The agent compiles a table:
+
+| Symbol | 8h funding | Annualized |
+| ------ | ---------- | ---------- |
+| ETH    | -0.012 %   | -13.1 %    |
+| AVAX   | -0.005 %   |  -5.5 %    |
+| SOL    |  0.001 %   |   1.1 %    |
+| BTC    |  0.012 %   |  13.1 %    |
+
+Negative means longs pay shorts; positive means shorts pay longs.
+
+## 4. Cross-check 24h volume
+
+> Filter to symbols with > $10M of 24h volume.
+
+```jsonc
+{ "name": "lighter_market_stats" }
+```
+
+The agent then drops illiquid symbols. Funding income on illiquid
+markets isn't worth chasing — slippage on entry/exit eats the carry.
+
+## 5. (Optional) inspect open interest
+
+> Show me open interest for ETH and BTC.
+
+`lighter_market_stats` already returns `open_interest_usd`. Imbalanced
+OI is what drives funding, so the agent can correlate.
+
+## What this guide demonstrates
+
+<CardGroup cols={2}>
+  <Card title="Pure read flow" icon="eye">
+    Zero risk. Works the same in `readonly`, `paper`, `live`, `funds`.
+  </Card>
+  <Card title="Many small calls" icon="layer-group">
+    Each tool is cheap and idempotent. Agents can fan out without worry.
+  </Card>
+  <Card title="Audit visibility" icon="scroll">
+    Every `lighter_market_*` call is logged. You can replay the scan
+    later from the audit file.
+  </Card>
+  <Card title="No credentials needed" icon="user-slash">
+    Public reads work without any LIGHTER_API_PRIVATE_KEY. Run from
+    anywhere.
+  </Card>
+</CardGroup>
+
+## Going further
+
+- Use [`lighter-mcp watch`](/reference/cli) with edge-triggered alerts
+  on funding crossing a threshold.
+- Combine with `lighter_market_candles` to back out price-vs-funding
+  correlations.
+- In `live` mode, wrap the scan with `lighter_account_info` to confirm
+  available margin before placing the carry trade.

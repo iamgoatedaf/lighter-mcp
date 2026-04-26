@@ -1,0 +1,98 @@
+---
+title: "Cursor"
+description: "Add Lighter MCP to Cursor with slash commands, a Cursor rule, the lighter-trader sub-agent, and an audit hook."
+---
+
+The Cursor adapter wires up:
+
+- The MCP server in `~/.cursor/mcp.json` (or per-project `.cursor/mcp.json`).
+- A Cursor rule (`.cursor/rules/lighter.mdc`) that primes the assistant on safe Lighter use.
+- Slash commands `/lighter-status`, `/lighter-positions`, `/lighter-kill`, `/lighter-paper`, `/lighter-audit`.
+- The `lighter-trader` sub-agent with a narrow tool budget.
+- An optional pre-tool hook that blocks live writes if `lighter_safety_status` reports caps exhausted.
+
+## Install
+
+From the repo root:
+
+```bash
+bash install.sh --kit-path ~/lighter-agent-kit --adapter cursor
+```
+
+To install only into one project (instead of the global Cursor profile):
+
+```bash
+INSTALL_ADAPTER_TARGET=/path/to/your/project \
+  bash install.sh --kit-path ~/lighter-agent-kit --adapter cursor --no-doctor
+```
+
+The installer is idempotent — re-run it after upgrades.
+
+## What gets written
+
+```
+~/.cursor/
+├── mcp.json                     # adds the lighter-mcp entry
+└── rules/                       # global rules (only if --global)
+
+<project>/.cursor/
+├── mcp.json                     # per-project mcp config (recommended)
+├── rules/lighter.mdc            # Cursor rule
+├── commands/lighter-*.md        # slash commands
+├── agents/lighter-trader.md     # sub-agent definition
+└── hooks/lighter-pre-tool.json  # pre-tool guard
+```
+
+## mcp.json entry
+
+```json
+{
+  "mcpServers": {
+    "lighter": {
+      "command": "lighter-mcp",
+      "args": ["stdio"],
+      "env": {
+        "LIGHTER_KIT_PATH": "/Users/you/lighter-agent-kit"
+      }
+    }
+  }
+}
+```
+
+## Reload after config changes
+
+`Cmd-Shift-P` → **Reload MCP servers** (or just restart Cursor).
+
+## Verifying
+
+After Cursor reloads, open the chat panel and run:
+
+```
+/lighter-status
+```
+
+You should see the active mode, daily-notional remaining, equity, and
+open orders. If the slash command isn't recognized, the adapter files
+landed in the wrong directory — re-run the installer with
+`INSTALL_ADAPTER_TARGET` set to your project root.
+
+## Tips
+
+<CardGroup cols={2}>
+  <Card title="Use the sub-agent for trading" icon="user-shield">
+    `@lighter-trader` enforces tool restrictions and confirmation
+    discipline that a generic Cursor agent doesn't.
+  </Card>
+  <Card title="Keep mcp.json per-project" icon="folder-tree">
+    Different projects can run different modes (one in `paper`, one in
+    `live`) by pointing at different config files via the `LIGHTER_MCP_CONFIG` env.
+  </Card>
+  <Card title="Read the rule" icon="book-open">
+    `.cursor/rules/lighter.mdc` documents the safety contract. It's worth
+    reading before delegating real money to the agent.
+  </Card>
+  <Card title="Hook = belt + suspenders" icon="shield">
+    The pre-tool hook is best-effort defense in depth. The MCP server's
+    own gates remain authoritative.
+  </Card>
+</CardGroup>

@@ -1,0 +1,201 @@
+---
+title: "Modes & safety"
+description: "The four modes (readonly, paper, live, funds), what gates each one adds, and the promotion checklists between them."
+---
+
+The single most important thing about Lighter MCP is its **mode model**.
+The tool catalog grows monotonically — higher-risk tools physically
+do not exist in the catalog until you opt in.
+
+## The four modes
+
+<CardGroup cols={2}>
+  <Card title="readonly" icon="eye">
+    Reads only. 18 tools. No credentials needed for public reads. Default after install.
+  </Card>
+  <Card title="paper" icon="flask">
+    Reads + paper trading (29 tools). Local simulator against live snapshots. Safe to leave on indefinitely.
+  </Card>
+  <Card title="live" icon="bolt">
+    Reads + paper + live trading (37 tools). Adds `[live]` config block, allowlists, caps, leverage limits, and two-step confirmations.
+  </Card>
+  <Card title="funds" icon="vault">
+    Everything above + transfers and withdrawals (39 tools). Adds `[funds]` config block. All funds tools confirm unconditionally.
+  </Card>
+</CardGroup>
+
+## Catalog by mode
+
+| Tool family            | readonly | paper | live | funds |
+| ---------------------- | :------: | :---: | :--: | :---: |
+| `lighter_market_*`     | ✅       | ✅    | ✅   | ✅    |
+| `lighter_account_*`    | ✅       | ✅    | ✅   | ✅    |
+| `lighter_orders_*`     | ✅       | ✅    | ✅   | ✅    |
+| `lighter_paper_*`      | —        | ✅    | ✅   | ✅    |
+| `lighter_live_*`       | —        | —     | ✅   | ✅    |
+| `lighter_funds_*`      | —        | —     | —    | ✅    |
+| `lighter_health` etc.  | ✅       | ✅    | ✅   | ✅    |
+
+## What each gate enforces
+
+<AccordionGroup>
+  <Accordion title="Mode gate" icon="layer-group">
+    Checked on every write tool. If `live.enabled = false` (or
+    `mode != live`), the tool returns:
+
+    ```json
+    {
+      "ok": false,
+      "category": "safety",
+      "error": "live mode is not enabled in this server's config"
+    }
+    ```
+
+    Implemented in `safety.require_live_enabled()` /
+    `safety.require_withdrawals_enabled()`.
+  </Accordion>
+
+  <Accordion title="Symbol allowlist" icon="filter">
+    `live.allowed_symbols = ["BTC"]` means **only** BTC is tradeable.
+    Asking the agent to trade ETH returns:
+
+    ```json
+    {
+      "ok": false,
+      "category": "safety",
+      "error": "symbol ETH not in live.allowed_symbols"
+    }
+    ```
+
+    An empty list means *no allowlist* (anything goes) — strongly not
+    recommended for production.
+  </Accordion>
+
+  <Accordion title="Per-order notional cap" icon="dollar-sign">
+    `live.max_order_notional_usd = 250` means a single order cannot exceed
+    $250 of notional exposure (`amount × price`). For market orders the
+    server fetches a recent price from `market stats`; if no price is
+    available it **fails closed** rather than letting the order through.
+  </Accordion>
+
+  <Accordion title="Daily notional cap" icon="calendar">
+    `live.max_daily_notional_usd = 1000` means total executed notional in
+    a UTC day cannot exceed $1000. Counter:
+
+    - persists across restarts in
+      `~/.lighter/lighter-mcp/daily-notional.json`,
+    - resets at UTC midnight,
+    - **fails safe to "cap exhausted"** if the file is corrupt — never
+      silently resets to 0.
+  </Accordion>
+
+  <Accordion title="Leverage cap" icon="gauge">
+    `live.max_leverage = 5` rejects any `lighter_live_set_leverage`
+    request with `leverage > 5`.
+  </Accordion>
+
+  <Accordion title="Two-step confirmation" icon="key">
+    For every fund-loss path:
+
+    1. First call (no `confirmation_id`) returns a `preview` envelope with
+       a `plan` and a single-use token.
+    2. Second call (same args + `confirmation_id`) executes.
+
+    Tokens are **bound** to:
+    - tool name,
+    - SHA-256 digest of the canonical args,
+    - TTL (default 120s).
+
+    Re-using a token, replaying with different args, or letting it expire
+    all return a `confirmation` error envelope.
+
+    See [Confirmations](/reference/confirmations) for the full lifecycle.
+  </Accordion>
+
+  <Accordion title="Withdrawal cap" icon="vault">
+    `funds.max_withdrawal_usd = 1000` is checked before the preview is
+    even issued. Funds tools always confirm regardless of any other
+    setting.
+  </Accordion>
+</AccordionGroup>
+
+## Promotion checklists
+
+### readonly → paper
+
+<Steps>
+  <Step title="Set mode = &quot;paper&quot;">
+    Edit `~/.lighter/lighter-mcp/config.toml`. No new config block needed.
+  </Step>
+  <Step title="Reload">
+    Reload your agent's MCP connection.
+  </Step>
+  <Step title="Verify">
+    `lighter_paper_*` tools should appear in the agent's tool list. Paper trading needs no credentials — it runs locally against live snapshots.
+  </Step>
+</Steps>
+
+### paper → live
+
+<Steps>
+  <Step title="Run lighter-mcp doctor">
+    Confirm `system.status = 200` and `auth.auth_capable = true`.
+  </Step>
+  <Step title="Verify the right account">
+    Confirm `auth.account_index` shows the account you intend to trade — and only that one.
+  </Step>
+  <Step title="Set narrow caps">
+    The first session with live mode should use the smallest reasonable values:
+
+    ```toml
+    [live]
+    enabled = true
+    allowed_symbols = ["BTC"]
+    max_order_notional_usd = 100
+    max_daily_notional_usd = 250
+    max_leverage = 2
+    require_confirmation = true
+    ```
+  </Step>
+  <Step title="Restart the MCP transport">
+    `live.enabled = true` is read at startup.
+  </Step>
+  <Step title="Run a 1-USD test order">
+    Place a tiny `lighter_live_market_order` to confirm preview→execute → fill works end-to-end. Cancel any leftover position.
+  </Step>
+  <Step title="Widen caps gradually">
+    Only after the round-trip works.
+  </Step>
+</Steps>
+
+### live → funds
+
+<Steps>
+  <Step title="Re-do the live checklist">
+    Funds mode requires `[live]` to be valid too.
+  </Step>
+  <Step title="Decide whether you need transfers">
+    If not, leave `funds.transfers_enabled = false`.
+  </Step>
+  <Step title="Set max_withdrawal_usd">
+    The smallest cap that still lets your strategy do its job.
+  </Step>
+  <Step title="Restart">
+    Funds tools appear in the catalog only after reload.
+  </Step>
+</Steps>
+
+## When in doubt
+
+<Tip>
+**Demote the mode.** It costs you nothing and removes the entire risk
+class from the catalog. The MCP server's primary safety property is
+that the agent simply *cannot call a tool that isn't registered*.
+</Tip>
+
+## Related
+
+- [Safety internals](/reference/safety) — how `Safety` is implemented.
+- [Confirmations internals](/reference/confirmations) — token lifecycle.
+- [Audit log](/reference/audit-log) — every gate decision is recorded.
+- [Disclaimer](/security/disclaimer) — read before flipping live/funds.

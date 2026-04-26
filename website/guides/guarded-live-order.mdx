@@ -1,0 +1,203 @@
+---
+title: "Guarded live order"
+description: "Walk through the full two-step preview/confirm flow on lighter_live_market_order with caps and allowlists in effect."
+---
+
+<Warning>
+This guide places a **real** order on Lighter. Use the **smallest
+possible** notional and check the [disclaimer](/security/disclaimer)
+first.
+</Warning>
+
+## Setup
+
+```toml title="~/.lighter/lighter-mcp/config.toml"
+mode = "live"
+kit_path = "/Users/you/lighter-agent-kit"
+host = "https://mainnet.zklighter.elliot.ai"
+confirmation_ttl_s = 120
+
+[live]
+enabled = true
+allowed_symbols = ["BTC"]
+max_order_notional_usd = 50
+max_daily_notional_usd = 100
+max_leverage = 2
+require_confirmation = true
+```
+
+Restart the MCP transport (Cursor: *Reload MCP servers*; Claude
+Desktop: quit + relaunch).
+
+## 1. Confirm safety posture
+
+Ask:
+
+> What's the current safety status of the Lighter MCP?
+
+The agent calls `lighter_safety_status` and reports:
+
+```json
+{
+  "mode": "live",
+  "live": {
+    "enabled": true,
+    "allowed_symbols": ["BTC"],
+    "max_order_notional_usd": 50,
+    "max_daily_notional_usd": 100,
+    "max_leverage": 2,
+    "require_confirmation": true
+  },
+  "daily_notional": { "executed_today_usd": 0, "remaining_usd": 100 }
+}
+```
+
+## 2. Place a tiny order — phase 1 (preview)
+
+> Buy $20 of BTC at market on Lighter.
+
+The agent estimates `0.0003 BTC` from current price (~$67k) and calls:
+
+```jsonc
+{
+  "name": "lighter_live_market_order",
+  "arguments": { "symbol": "BTC", "side": "buy", "amount": 0.0003 }
+}
+```
+
+The MCP server runs the safety chain (mode → allowlist → notional cap
+→ daily room → leverage), then issues a preview:
+
+```json
+{
+  "ok": true,
+  "stage": "preview",
+  "tool": "lighter_live_market_order",
+  "plan": {
+    "action": "place_market_order",
+    "symbol": "BTC",
+    "side": "buy",
+    "amount": 0.0003,
+    "slippage": 0.01,
+    "estimated_notional_usd": 20.17
+  },
+  "confirmation_id": "5b9b1e...c2",
+  "expires_at": 1782800400.0,
+  "next": "Show this plan to the user. To execute, call the same tool with the same arguments and confirmation_id set to the value above."
+}
+```
+
+The agent shows the plan and waits.
+
+## 3. Approve — phase 2 (execute)
+
+> approve
+
+The agent re-issues the call with the token populated:
+
+```jsonc
+{
+  "name": "lighter_live_market_order",
+  "arguments": {
+    "symbol": "BTC",
+    "side": "buy",
+    "amount": 0.0003,
+    "confirmation_id": "5b9b1e...c2"
+  }
+}
+```
+
+`ConfirmationStore.consume()` validates:
+
+- `tool == "lighter_live_market_order"` ✅
+- `digest(canonical_args)` matches the digest stored at preview time ✅
+- `now() < expires_at` ✅
+
+Token is deleted (single-use), the kit is invoked, the fill comes
+back, and `record_executed_notional` advances the daily counter.
+
+```json
+{
+  "ok": true,
+  "fill_price": "67234.50",
+  "filled_base_amount": "0.0003",
+  "effective_amount": "0.0003",
+  "effective_price": "67234.50",
+  "fees_paid": "0.0091",
+  "tx_hash": "0x..."
+}
+```
+
+## 4. Verify the daily counter advanced
+
+Ask again:
+
+> Safety status?
+
+```json
+{
+  "daily_notional": { "executed_today_usd": 20.17, "remaining_usd": 79.83 }
+}
+```
+
+## 5. Failure modes you should test
+
+<AccordionGroup>
+  <Accordion title="Modify the args between preview and execute" icon="circle-exclamation">
+    Try having the agent change `amount` to `0.001` between the two
+    calls (with the same token). You should get:
+
+    ```json
+    { "ok": false, "category": "confirmation", "error": "confirmation token bound to different tool/args" }
+    ```
+  </Accordion>
+
+  <Accordion title="Wait past the TTL" icon="hourglass-end">
+    Sleep 130s after the preview, then approve. Expected:
+
+    ```json
+    { "ok": false, "category": "confirmation", "error": "confirmation token expired" }
+    ```
+  </Accordion>
+
+  <Accordion title="Try a non-allowlisted symbol" icon="filter">
+    "Buy $20 of ETH" should be rejected at the safety gate, before any
+    preview is issued:
+
+    ```json
+    { "ok": false, "category": "safety", "error": "symbol ETH not in live.allowed_symbols" }
+    ```
+  </Accordion>
+
+  <Accordion title="Exceed the per-order cap" icon="dollar-sign">
+    "Buy $200 of BTC" with `max_order_notional_usd = 50`:
+
+    ```json
+    { "ok": false, "category": "safety", "error": "order notional 200.51 exceeds live.max_order_notional_usd=50.00" }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Why each failure mode matters
+
+- **Args change rejection** is what makes a preview "what you see is
+  what you get". The agent literally cannot show one plan and execute
+  another.
+- **TTL expiry** ensures stale approvals don't get reused after the
+  user has moved on.
+- **Allowlist** is the strongest single defense against the agent
+  trading the wrong instrument.
+- **Per-order cap** bounds the worst-case loss from any single
+  approval.
+
+## Recovery
+
+If anything looks weird mid-session:
+
+```
+> /lighter-kill
+```
+
+This invokes the panic close sequence (`cancel_all` then `close_all`),
+both gated by the same two-step confirmation. The literal word
+`confirm` is required.

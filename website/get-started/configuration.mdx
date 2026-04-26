@@ -1,0 +1,197 @@
+---
+title: "Configuration"
+description: "Every key in lighter-mcp's TOML config — including the [live] and [funds] blocks, environment overrides, and how reloading works."
+---
+
+`lighter-mcp` reads a single TOML file. Resolution order:
+
+1. `--config <path>` flag.
+2. `$LIGHTER_MCP_CONFIG` env var.
+3. `~/.lighter/lighter-mcp/config.toml`.
+4. Built-in defaults — used only when none of the above exist *and*
+   `$LIGHTER_KIT_PATH` is set.
+
+## Top-level keys
+
+<ParamField path="mode" type="string" default="readonly">
+  One of `readonly`, `paper`, `live`, `funds`. Higher-risk modes require
+  the corresponding config block (`[live]` / `[funds]`) to be present
+  and `enabled = true`.
+</ParamField>
+
+<ParamField path="kit_path" type="path" required>
+  Absolute path to a working `lighter-agent-kit` checkout with its venv
+  built. Example: `/Users/you/lighter-agent-kit`.
+</ParamField>
+
+<ParamField path="python_executable" type="path" default="<kit_path>/.venv/bin/python">
+  Override only if the kit's venv lives somewhere other than its default
+  location. The runner uses this interpreter to spawn `query.py` /
+  `trade.py` / `paper.py`.
+</ParamField>
+
+<ParamField path="audit_log" type="path" default="~/.lighter/lighter-mcp/audit.jsonl">
+  Path to the append-only JSONL audit file. Rotate externally (e.g.
+  `logrotate`) if it grows past your retention budget.
+</ParamField>
+
+<ParamField path="confirmation_ttl_s" type="integer" default="120">
+  Confirmation token lifetime in seconds. After expiry the token is
+  rejected and the agent must re-issue the preview.
+</ParamField>
+
+<ParamField path="host" type="string" default="https://mainnet.zklighter.elliot.ai">
+  Lighter API host. Use the testnet host while developing strategies.
+</ParamField>
+
+## `[live]`
+
+Required when `mode` is `live` or `funds`. The MCP server **refuses to
+register write tools** unless `enabled = true`.
+
+<ParamField path="live.enabled" type="boolean" default="false">
+  Master switch for live writes. If `false`, all `lighter_live_*` tools
+  return a safety envelope.
+</ParamField>
+
+<ParamField path="live.allowed_symbols" type="list[string]" default="[]">
+  If non-empty, only listed bases (e.g. `["BTC"]`) may be traded.
+  An empty list means **no allowlist** — strongly not recommended.
+</ParamField>
+
+<ParamField path="live.max_order_notional_usd" type="float" default="0">
+  Per-order notional cap in USD. `0` disables the cap.
+</ParamField>
+
+<ParamField path="live.max_daily_notional_usd" type="float" default="0">
+  Rolling 24-hour notional cap. Counter resets at UTC midnight and
+  persists across restarts in `daily-notional.json` next to the audit
+  log. `0` disables.
+</ParamField>
+
+<ParamField path="live.max_leverage" type="integer" default="0">
+  Per-symbol leverage cap. `0` disables.
+</ParamField>
+
+<ParamField path="live.require_confirmation" type="boolean" default="true">
+  Whether high-risk live actions go through the two-step preview/confirm
+  flow. Disable **only** if the upstream agent already enforces a
+  preview/approve UX.
+</ParamField>
+
+## `[funds]`
+
+Required when `mode = "funds"`. Funds tools always confirm regardless
+of `require_confirmation` — they move real assets.
+
+<ParamField path="funds.transfers_enabled" type="boolean" default="false">
+  Allow `lighter_funds_transfer` (move asset between spot and perp routes
+  on the same account).
+</ParamField>
+
+<ParamField path="funds.withdrawals_enabled" type="boolean" default="false">
+  Allow `lighter_funds_withdraw` (irreversible off-Lighter withdrawal).
+</ParamField>
+
+<ParamField path="funds.max_withdrawal_usd" type="float" default="0">
+  Per-withdrawal cap in USD. `0` disables.
+</ParamField>
+
+<ParamField path="funds.require_confirmation" type="boolean" default="true">
+  Always `true` in practice; the funds tool path ignores `false`.
+</ParamField>
+
+## Environment overrides
+
+| Env                    | Effect                                            |
+| ---------------------- | ------------------------------------------------- |
+| `LIGHTER_MCP_CONFIG`   | Path to the config file (overrides the default).  |
+| `LIGHTER_KIT_PATH`     | Override `kit_path` (CI / containers).            |
+| `LIGHTER_HOST`         | Override `host`.                                  |
+
+## Example: `readonly`
+
+```toml
+mode = "readonly"
+kit_path = "/Users/you/lighter-agent-kit"
+```
+
+That's it. The whole `[live]` / `[funds]` blocks can be omitted.
+
+## Example: `paper`
+
+```toml
+mode = "paper"
+kit_path = "/Users/you/lighter-agent-kit"
+
+# audit log is optional — defaults to ~/.lighter/lighter-mcp/audit.jsonl
+```
+
+Paper trading runs locally; no gates apply beyond input validation.
+
+## Example: `live` with narrow caps
+
+```toml
+mode = "live"
+kit_path = "/Users/you/lighter-agent-kit"
+host = "https://mainnet.zklighter.elliot.ai"
+confirmation_ttl_s = 120
+
+[live]
+enabled = true
+allowed_symbols = ["BTC", "ETH"]
+max_order_notional_usd = 500
+max_daily_notional_usd = 2000
+max_leverage = 5
+require_confirmation = true
+```
+
+## Example: `funds` with withdrawals only
+
+```toml
+mode = "funds"
+kit_path = "/Users/you/lighter-agent-kit"
+
+[live]
+enabled = true
+allowed_symbols = ["BTC"]
+max_order_notional_usd = 100
+max_daily_notional_usd = 200
+max_leverage = 2
+
+[funds]
+transfers_enabled = false
+withdrawals_enabled = true
+max_withdrawal_usd = 1000
+```
+
+## File permissions
+
+The loader prints a warning to stderr if the config file is
+group/world-writable:
+
+```
+WARNING: lighter-mcp config /home/you/.lighter/lighter-mcp/config.toml
+is group/world writable; tighten permissions with `chmod 600`.
+```
+
+The config can hold trusted flags like `live.enabled = true`, so a
+group-writable file would let any other user on the host promote the
+server to live. Always:
+
+```bash
+chmod 600 ~/.lighter/lighter-mcp/config.toml
+```
+
+## Reloading
+
+The server reads config **once at startup**. After editing:
+
+| Agent           | How to reload                                    |
+| --------------- | ------------------------------------------------ |
+| Cursor          | Settings → MCP → *Reload MCP servers*.            |
+| Claude Code     | Restart the CLI session.                         |
+| Claude Desktop  | Quit & relaunch the app.                          |
+| Codex           | `codex mcp restart` (or restart the CLI).         |
+
+For HTTP transport users, `Ctrl-C` and re-run `lighter-mcp serve`.

@@ -1,0 +1,1 @@
+../../../_shared/hooks/after-lighter-trade.sh

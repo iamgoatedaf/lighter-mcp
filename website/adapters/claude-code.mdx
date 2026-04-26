@@ -1,0 +1,79 @@
+---
+title: "Claude Code"
+description: "Add Lighter MCP to Anthropic's Claude Code CLI agent with SKILL.md, slash commands, and the lighter-trader sub-agent."
+---
+
+The Claude Code adapter ships:
+
+- An MCP entry in `~/.claude/claude_code_config.json`.
+- `SKILL.md` that primes Claude on the Lighter workflow.
+- The shared slash commands and `lighter-trader` sub-agent.
+- A pre-tool hook (optional) for caps enforcement.
+
+## Install
+
+```bash
+bash install.sh --kit-path ~/lighter-agent-kit --adapter claude
+```
+
+For a project-local install:
+
+```bash
+INSTALL_ADAPTER_TARGET=/path/to/your/project \
+  bash install.sh --kit-path ~/lighter-agent-kit --adapter claude --no-doctor
+```
+
+## What gets written
+
+```
+~/.claude/
+└── claude_code_config.json      # adds the lighter-mcp MCP entry
+
+<project>/.claude/
+├── SKILL.md                     # Claude Code skill (auto-loaded)
+├── commands/lighter-*.md
+├── agents/lighter-trader.md
+└── hooks/lighter-pre-tool.json
+```
+
+## claude_code_config.json entry
+
+```json
+{
+  "mcpServers": {
+    "lighter": {
+      "command": "lighter-mcp",
+      "args": ["stdio"],
+      "env": {
+        "LIGHTER_KIT_PATH": "/Users/you/lighter-agent-kit"
+      }
+    }
+  }
+}
+```
+
+## Reload
+
+Restart `claude` (Ctrl-D the current session and re-run).
+
+## Verifying
+
+```
+> /lighter-status
+```
+
+Or simply ask:
+
+> What mode is the Lighter MCP server in, and how much daily notional do I have left?
+
+The agent should call `lighter_safety_status` and reply.
+
+## Notes
+
+- Claude Code respects `SKILL.md` automatically — it doesn't need to be
+  added anywhere else.
+- The `lighter-trader` sub-agent is invoked with `@lighter-trader` and
+  has its own narrow tool budget — it cannot edit your source files.
+- Hooks are scoped to the project containing `.claude/hooks/`. They are
+  best-effort; the MCP server's own gates remain the authoritative
+  safety boundary.

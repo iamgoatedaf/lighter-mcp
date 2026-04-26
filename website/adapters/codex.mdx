@@ -1,0 +1,72 @@
+---
+title: "Codex"
+description: "Add Lighter MCP to OpenAI Codex via a Codex plugin with SKILL.md, slash commands, and the lighter-trader sub-agent."
+---
+
+The Codex adapter ships as a **Codex plugin** under
+`adapters/codex/.codex-plugin/plugin.json`. The plugin registers the
+MCP server, the SKILL, the slash commands, and the sub-agent.
+
+## Install
+
+```bash
+bash install.sh --kit-path ~/lighter-agent-kit --adapter codex
+```
+
+The installer copies (or symlinks) the plugin into Codex's plugins
+folder. Codex picks it up at next launch.
+
+## What gets written
+
+```
+~/.codex/plugins/lighter-mcp/
+├── .codex-plugin/plugin.json    # plugin manifest
+├── SKILL.md
+├── commands/lighter-*.md
+└── agents/lighter-trader.md
+```
+
+## plugin.json sketch
+
+```json
+{
+  "name": "lighter-mcp",
+  "version": "0.1.0",
+  "description": "Lighter trading toolkit",
+  "mcpServers": {
+    "lighter": {
+      "command": "lighter-mcp",
+      "args": ["stdio"]
+    }
+  },
+  "skills": ["./SKILL.md"],
+  "commands": ["./commands"],
+  "agents": ["./agents/lighter-trader.md"]
+}
+```
+
+## Reload
+
+```bash
+codex mcp restart
+```
+
+## Verifying
+
+```
+> /lighter-status
+```
+
+Or invoke the sub-agent:
+
+```
+> @lighter-trader give me a paper trading session for today
+```
+
+## Notes
+
+- Codex's MCP integration requires **Codex CLI ≥ 0.30**. Earlier
+  versions don't load plugin-defined MCP servers.
+- The `lighter-trader` sub-agent has the same narrow tool budget as in
+  the other adapters — it cannot edit source files.
+- `codex mcp logs lighter` is the fastest way to debug a missing tool.

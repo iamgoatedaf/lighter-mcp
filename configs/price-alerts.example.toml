@@ -1,0 +1,55 @@
+# lighter-mcp price-alert watcher config
+#
+# Used by `lighter-mcp watch`.
+# Copy this file to ~/.lighter/lighter-mcp/price-alerts.toml and edit the
+# thresholds. Each alert is edge-triggered: it fires once when the condition
+# becomes true, then re-arms after price moves back across the threshold.
+
+# Polling interval in seconds. Minimum 5s. The watcher does ONE market-stats
+# call per interval regardless of how many alerts you configure.
+interval_s = 30
+
+# Where to append a one-line record per fired alert.
+notify_log = "~/.lighter/lighter-mcp/notifications.log"
+
+# Persistent edge-trigger state. Survives restarts so a crossed alert does
+# not re-fire on every reload.
+state_path = "~/.lighter/lighter-mcp/price-alerts.state.json"
+
+# macOS desktop notification via osascript. No-op on Linux/Windows.
+desktop = true
+
+# Each [[alerts]] entry is one rule. `op` must be "above" or "below".
+# `label` is optional and shown in the notification body.
+
+[[alerts]]
+symbol = "BTC"
+op     = "above"
+price  = 80000
+label  = "BTC breakout"
+
+[[alerts]]
+symbol = "BTC"
+op     = "below"
+price  = 76000
+label  = "BTC breakdown"
+
+[[alerts]]
+symbol = "ETH"
+op     = "above"
+price  = 2400
+
+[[alerts]]
+symbol = "ETH"
+op     = "below"
+price  = 2280
+
+[[alerts]]
+symbol = "SOL"
+op     = "above"
+price  = 90
+
+[[alerts]]
+symbol = "SOL"
+op     = "below"
+price  = 84

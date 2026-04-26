@@ -1,0 +1,196 @@
+---
+title: "Paper trading"
+description: "11 MCP tools that wrap scripts/paper.py — a local simulator running against live Lighter snapshots. Zero real-money risk."
+---
+
+Paper trading lives entirely on your machine. The simulator pulls
+**real** order-book snapshots from Lighter to fill orders realistically,
+but never broadcasts anything. There are no risk gates beyond input
+validation: schemas reject malformed inputs, and that's it.
+
+<Note>
+Paper state lives at `~/.lighter/lighter-agent-kit/paper-state.json`
+(managed by the kit). Backup or delete that file as needed; the MCP
+server doesn't touch it directly.
+</Note>
+
+## At a glance
+
+| Tool                              | Purpose                                                                |
+| --------------------------------- | ---------------------------------------------------------------------- |
+| `lighter_paper_init`              | Create a fresh paper account. Required before the first paper order.  |
+| `lighter_paper_reset`             | Wipe paper state and start fresh.                                      |
+| `lighter_paper_set_tier`          | Change paper account fee tier.                                         |
+| `lighter_paper_status`            | Equity, margin, fees summary.                                          |
+| `lighter_paper_positions`         | Open paper positions.                                                  |
+| `lighter_paper_trades`            | Paper trade history (most recent first).                               |
+| `lighter_paper_health`            | Margin status / health check.                                          |
+| `lighter_paper_liquidation_price` | Estimated liquidation price for one position.                          |
+| `lighter_paper_refresh`           | Force-refresh order book snapshot for diagnostics.                     |
+| `lighter_paper_market_order`      | Taker market order.                                                    |
+| `lighter_paper_ioc_order`         | Taker IOC order with a limit price.                                    |
+
+---
+
+## `lighter_paper_init`
+
+Create a new paper account with a default starting balance. **Required**
+before the first paper order — the kit returns
+`paper account not initialized` otherwise.
+
+```json title="Response"
+{ "ok": true, "balance": "10000.00", "account_id": "paper-1" }
+```
+
+---
+
+## `lighter_paper_reset`
+
+Wipe paper state. The next call must be `lighter_paper_init` again.
+
+<Warning>
+Irreversibly deletes paper trade history, positions, and balances.
+The simulator state is local-only, so nothing else is affected.
+</Warning>
+
+---
+
+## `lighter_paper_set_tier`
+
+<ParamField path="tier" type="enum" required>
+  One of `standard`, `premium`, `premium_1` … `premium_7`. The schema
+  matches `^[a-z][a-z0-9_]{0,31}$` for safety, so unknown casings like
+  `Premium` are normalized.
+</ParamField>
+
+Used to simulate maker/taker fees at different VIP tiers.
+
+---
+
+## `lighter_paper_status`
+
+Snapshot of equity, available margin, fees, leverage, and tier.
+
+```json title="Response"
+{
+  "balance": "9842.50",
+  "equity": "9851.10",
+  "available_margin": "9301.10",
+  "tier": "premium_1",
+  "leverage_used": "1.0x"
+}
+```
+
+---
+
+## `lighter_paper_positions`
+
+<ParamField path="symbol" type="string | null" default="null">Filter to one symbol.</ParamField>
+<ParamField path="no_refresh" type="boolean" default="false">
+  When `true`, use the cached mark price from the last refresh instead
+  of fetching a fresh snapshot. Useful for tight loops where you don't
+  need millisecond freshness.
+</ParamField>
+
+---
+
+## `lighter_paper_trades`
+
+<ParamField path="symbol" type="string | null" default="null" />
+<ParamField path="limit" type="integer" default="50">1–500.</ParamField>
+
+Paper trade history, most recent first.
+
+---
+
+## `lighter_paper_health`
+
+```json title="Response"
+{
+  "ok": true,
+  "margin_health": "healthy",
+  "liquidation_distance_pct": 24.7
+}
+```
+
+---
+
+## `lighter_paper_liquidation_price`
+
+<ParamField path="symbol" type="string" required />
+<ParamField path="no_refresh" type="boolean" default="false" />
+
+Returns the estimated liquidation price for the current paper position
+on this symbol. Returns `null` if there is no position.
+
+---
+
+## `lighter_paper_refresh`
+
+<ParamField path="symbol" type="string" required />
+
+Forces the simulator to fetch a fresh order-book snapshot for one
+symbol. Useful when paper positions look stale relative to live prices.
+
+---
+
+## `lighter_paper_market_order`
+
+Taker-only market order against the cached snapshot.
+
+<ParamField path="symbol" type="string" required />
+<ParamField path="side" type="'buy' | 'sell' | 'long' | 'short'" required />
+<ParamField path="amount" type="float" required>
+  Base-asset amount, > 0.
+</ParamField>
+
+```json title="Response (excerpt)"
+{
+  "ok": true,
+  "fill_price": "67234.50",
+  "filled_base_amount": "0.01",
+  "fees_paid": "0.30",
+  "position_after": { "size": "0.01", "side": "long", "avg_price": "67234.50" }
+}
+```
+
+---
+
+## `lighter_paper_ioc_order`
+
+Taker IOC (immediate-or-cancel) with a limit price.
+
+<ParamField path="symbol" type="string" required />
+<ParamField path="side" type="'buy' | 'sell' | 'long' | 'short'" required />
+<ParamField path="amount" type="float" required>Base-asset amount, > 0.</ParamField>
+<ParamField path="price" type="float" required>Limit price, > 0.</ParamField>
+
+If the snapshot doesn't have liquidity at or better than `price` for
+the full amount, the partial fill is reported and the unfilled remainder
+is cancelled.
+
+---
+
+## Common errors
+
+<AccordionGroup>
+  <Accordion title="Common errors" icon="circle-exclamation">
+    | Symptom                                                | Likely cause                                              | Fix                                                                          |
+    | ------------------------------------------------------ | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
+    | `paper account not initialized`                        | First write before `_init`.                               | Call `lighter_paper_init` once per session.                                  |
+    | `insufficient paper margin`                            | Balance too small for the order's notional.               | Reset (`_reset` → `_init`) or place a smaller order.                         |
+    | Stale fill prices                                      | Snapshot is old.                                          | Call `lighter_paper_refresh` for the symbol, or pass `no_refresh = false`.   |
+    | Pydantic `tier` rejection                              | Tier name doesn't match `^[a-z][a-z0-9_]{0,31}$`.         | Use lowercase tier names (`standard`, `premium_3`, …).                        |
+    | `Input should be greater than 0` on `amount` / `price` | Pydantic numeric bounds.                                  | Pass strictly positive values.                                                |
+  </Accordion>
+</AccordionGroup>
+
+## Promotion path
+
+Paper trading is the recommended bridge between `readonly` and `live`:
+
+1. Drive your strategy from the agent for a few sessions on paper.
+2. Inspect `lighter_paper_trades` and `lighter_paper_positions` to
+   verify the agent isn't doing anything unexpected.
+3. Review the [audit log](/reference/audit-log) for tool sequencing.
+4. Only then promote to `live` (see [Modes & safety](/get-started/modes-and-safety)).

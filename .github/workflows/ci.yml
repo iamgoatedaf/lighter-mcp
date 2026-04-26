@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install package + dev extras
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,http]"
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Tests (pytest)
+        # Kit-dependent integration tests skip themselves when LIGHTER_KIT_PATH
+        # is unset, so the suite runs hermetically here.
+        run: pytest -q
+
+  smoke-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Smoke install (no doctor, fake kit path)
+        run: |
+          mkdir -p /tmp/fake-kit
+          bash install.sh --kit-path /tmp/fake-kit --no-doctor
+      - name: lighter-mcp --help
+        run: |
+          ~/.lighter/lighter-mcp/venv/bin/lighter-mcp --help

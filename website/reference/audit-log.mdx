@@ -1,0 +1,94 @@
+---
+title: "Audit log"
+description: "Append-only JSONL record of every tool invocation. Includes redaction rules, locking semantics, and useful jq snippets."
+---
+
+Every tool invocation appends one JSON object per line to
+`~/.lighter/lighter-mcp/audit.jsonl`. Configurable via the `audit_log`
+key in `config.toml`.
+
+## Record format
+
+| Field             | Type    | Notes                                                                           |
+| ----------------- | ------- | ------------------------------------------------------------------------------- |
+| `ts`              | float   | Unix epoch seconds when the call started.                                       |
+| `tool`            | string  | The MCP tool name, e.g. `lighter_live_market_order`.                            |
+| `mode`            | string  | Active server mode at call time.                                                |
+| `ok`              | bool    | Whether the kit subprocess returned without surfacing an error envelope.        |
+| `args`            | object  | Sanitized tool arguments. Credential-like keys replaced with `[REDACTED]`.      |
+| `result`          | any     | Sanitized parsed JSON from the kit. Two levels of nested objects max.           |
+| `confirmation_id` | string  | Preview token consumed (if any). Omitted when not applicable.                   |
+| `error`           | string  | Error message when `ok = false`. Omitted otherwise.                             |
+
+## Sanitization
+
+Substrings that trigger redaction (case-insensitive) on `args` and
+`result` keys: `private_key`, `secret`, `api_key`, `token`, `signature`,
+`tx_info`, `credential`, `passphrase`, `password`, `auth`, `sig`.
+
+String values are truncated to **4 KiB** with a `…[truncated]` suffix
+to keep the file size predictable for long-lived sessions.
+
+## Locking
+
+Each append takes:
+
+1. An **intra-process** `asyncio.Lock`, so concurrent tool calls in the
+   same server can't interleave.
+2. A **POSIX `flock`** on the file, so two `lighter-mcp` instances
+   pointing at the same audit file (e.g. one on stdio, one on HTTP)
+   don't corrupt each other.
+
+If the file is unwritable (read-only filesystem, full disk), the
+append soft-fails: a warning is printed to stderr but the tool call
+itself still returns its result. Audit reliability isn't allowed to
+block trading or reads.
+
+## Useful queries
+
+```bash
+# All live writes today
+jq 'select(.tool|startswith("lighter_live_"))' \
+   ~/.lighter/lighter-mcp/audit.jsonl
+
+# Anything that returned an error envelope
+jq 'select(.ok==false)' ~/.lighter/lighter-mcp/audit.jsonl
+
+# Last 5 failures, with reason
+jq 'select(.ok==false) | {ts, tool, error}' \
+   ~/.lighter/lighter-mcp/audit.jsonl | tail -n 5
+
+# Total executed notional today (sum from your records)
+jq -r 'select(.tool|startswith("lighter_live_")) | .args.amount * .args.price' \
+   ~/.lighter/lighter-mcp/audit.jsonl | awk '{s+=$1} END {print s}'
+
+# Confirmations issued vs consumed
+jq -r '. | "\(.ts) \(.tool) \(if .confirmation_id then "consume" else "issue" end)"' \
+   ~/.lighter/lighter-mcp/audit.jsonl
+
+# Hourly call rate
+jq -r '.ts' ~/.lighter/lighter-mcp/audit.jsonl \
+   | awk '{ print int($1/3600) }' | sort | uniq -c
+```
+
+## Operational notes
+
+- The file is append-only. Rotate it externally (e.g. `logrotate`) if
+  it grows beyond your retention budget.
+- Restarting the server doesn't lose history — there's no in-memory
+  buffer.
+- `daily-notional.json` lives next to the audit file and is overwritten
+  at every executed live order. Do not delete it while the server is
+  running unless you intend to reset the daily counter (and accept that
+  the counter then starts from 0).
+- The file is JSONL, not JSON. `jq` must be invoked without `-s` for
+  the streaming-friendly per-line behavior shown above.
+
+## Threat model
+
+The audit log is **append-only and tamper-evident**, but not
+**tamper-proof** — a local attacker with write access to the file
+could rewrite history. If you need cryptographic audit guarantees,
+ship the lines to a remote append-only sink (CloudWatch Logs, Loki,
+etc.) using a sidecar process; the wrapper does not implement remote
+audit itself.

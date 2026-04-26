@@ -1,0 +1,145 @@
+---
+title: "Error envelope"
+description: "The single uniform shape every Lighter MCP failure collapses into, plus the categories you'll see and how to recover."
+---
+
+Every tool returns one of two shapes:
+
+1. **Success** — the parsed JSON body from the kit (varies per tool).
+2. **Error** — a uniform envelope so the agent can branch on it.
+
+There are three sources of error envelopes, distinguished by the
+`category` field:
+
+<CardGroup cols={3}>
+  <Card title="safety" icon="shield-halved">
+    Returned when a mode/allowlist/cap gate blocks the call. Never reaches the kit.
+  </Card>
+  <Card title="confirmation" icon="key">
+    Returned when the two-step token is missing, mismatched, or expired.
+  </Card>
+  <Card title="runner" icon="terminal">
+    Returned when the kit subprocess fails (non-zero exit, timeout, non-JSON output, or `{"error": ...}` body).
+  </Card>
+</CardGroup>
+
+## Safety envelope
+
+```json
+{
+  "ok": false,
+  "category": "safety",
+  "error": "symbol ETH not in live.allowed_symbols"
+}
+```
+
+Issued by `tools_live.py` and `tools_funds.py` whenever a `SafetyError`
+is raised. The `error` text is human-readable and stable; agents can
+also branch on substrings like `"max_order_notional_usd"` to surface
+contextual fixes.
+
+## Confirmation envelope
+
+```json
+{
+  "ok": false,
+  "category": "confirmation",
+  "error": "confirmation token expired"
+}
+```
+
+Issued whenever `ConfirmationStore.consume()` rejects a token. See
+[Confirmations](/reference/confirmations) for the full lifecycle.
+
+## Runner envelope
+
+```json
+{
+  "error": "kit script query.py exited with code 2",
+  "script": "query.py",
+  "argv": [
+    "/Users/you/lighter-agent-kit/.venv/bin/python",
+    "/Users/you/lighter-agent-kit/scripts/query.py",
+    "market", "book", "BTC", "--limit", "10"
+  ],
+  "exit_code": 2,
+  "stderr": "…last 2000 chars of stderr…"
+}
+```
+
+Source: `RunnerError.to_payload()` in `lighter_mcp/runner.py`. The
+envelope is also recorded in [audit.jsonl](/reference/audit-log) with
+`ok = false`. The agent can decide to retry, surface the message to
+the user, or fall back.
+
+## Categories of runner failure
+
+| Category                | Trigger                                                                                       | What it looks like                                                                              | How to fix                                                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **Schema rejection**    | Pydantic input fails (bad symbol, out-of-range `limit`, unknown `resolution`).                | Tool call raises `ValidationError` before any subprocess; surfaces as the agent's tool error.   | Fix the offending field; never edit the schema to "loosen" character classes.                                    |
+| **Kit not found**       | `kit_path` is wrong or the kit's venv was never built.                                        | `RunnerError`: `kit python or script not found: …`                                              | `lighter-mcp doctor`; verify `kit_path` and re-run the kit installer.                                            |
+| **Subprocess timeout**  | Default 60 s exceeded — usually the API host is unreachable.                                  | `RunnerError`: `kit script <name> timed out after 60s`, `exit_code: null`.                      | Check network and `host` config; consider testnet for development.                                               |
+| **Non-zero exit**       | Kit exited with a non-zero code (invalid args, upstream API error).                           | `exit_code` is set; `error` reports the kit's structured error message when present.            | Read `stderr` (last 2 KiB included). Common: bad symbol, missing credentials, rate-limit.                        |
+| **Non-JSON stdout**     | Kit printed something that isn't valid JSON (panic, banner, vendoring noise).                  | `RunnerError`: `kit script <name> returned non-JSON output`.                                    | Re-install the kit so its venv is clean; check kit logs.                                                         |
+| **API error envelope**  | Kit returned `exit_code: 0` but body is `{"error": "…"}`.                                     | `RunnerError` with `exit_code: 0` and a normalized `error` string.                              | The exchange said no — read the message; auth/credential issues vs input issues.                                 |
+
+## Quick recovery patterns
+
+<AccordionGroup>
+  <Accordion title="Schema rejection" icon="circle-exclamation">
+    The agent (or the user via the agent) gave bad input. Common offenders:
+
+    - Lowercase / mixed-case symbol — fix by uppercasing (the schema does this for valid chars, but exotic ones may slip through).
+    - `limit` outside the per-tool bounds — see each tool's schema.
+    - `resolution` not in the enum — must be exactly one of `1m / 5m / 15m / 30m / 1h / 4h / 1d`.
+
+    **Never bypass** by editing the schema; the regex blocks shell metacharacter
+    and CLI flag injection.
+  </Accordion>
+
+  <Accordion title="Kit not found" icon="folder-open">
+    Usually the path is wrong:
+
+    ```bash
+    lighter-mcp doctor               # confirms config_source + kit_path
+    ls "$KIT_PATH/scripts/query.py"  # should exist
+    ls "$KIT_PATH/.venv/bin/python"  # should exist
+    ```
+
+    If both exist but you still see this error, set `python_executable`
+    explicitly in `config.toml`.
+  </Accordion>
+
+  <Accordion title="Subprocess timeout" icon="hourglass">
+    1. `curl https://mainnet.zklighter.elliot.ai/api/v1/status`
+    2. If that hangs, your network is the problem.
+    3. If the curl is fast, the kit's signer might be wedged. Restart
+       the MCP transport.
+  </Accordion>
+
+  <Accordion title="API error envelope" icon="server">
+    Look at the `error` text:
+
+    | Substring                          | Meaning                                                            |
+    | ---------------------------------- | ------------------------------------------------------------------ |
+    | `unauthorized` / `invalid signature` | Credentials are wrong or rotated. Re-run the kit's onboarding.   |
+    | `rate limit`                       | Back off and retry with exponential delay.                         |
+    | `insufficient balance`             | Account doesn't have enough collateral / asset on the route.       |
+    | `unknown symbol`                   | Symbol isn't on this venue. Check `lighter_list_markets`.          |
+  </Accordion>
+</AccordionGroup>
+
+## Reproducing a failure outside the agent
+
+The audit log and error envelope both include the **full argv** the kit
+was invoked with. Copy-paste it into a shell to reproduce faithfully:
+
+```bash
+/Users/you/lighter-agent-kit/.venv/bin/python \
+   /Users/you/lighter-agent-kit/scripts/query.py \
+   market book BTC --limit 10
+```
+
+This is the single fastest way to bisect "is it the kit or the wrapper?"
+— if the shell command works, the wrapper has a bug; if both fail, it's
+upstream.

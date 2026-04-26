@@ -1,0 +1,71 @@
+---
+title: "OpenClaw / Telegram"
+description: "Use Lighter MCP from a Telegram-style bot. The slash commands and confirmation UX live in the bot, not in the MCP server."
+---
+
+OpenClaw is a Telegram-style agent host that can mount MCP servers and
+expose them through chat commands. The integration model differs from
+desktop agents:
+
+- **Slash commands** live on the bot side. The bot maps `/positions`
+  to `lighter_account_info` + `lighter_orders_open`, etc.
+- **Confirmations** are handled by the bot UI (inline keyboard with
+  `Approve` / `Cancel`). The MCP server's preview envelope still
+  carries the `confirmation_id`; the bot just renders it.
+- **Sub-agent** is not directly applicable — OpenClaw uses its own
+  agent model. The narrow tool budget should be enforced at the bot
+  configuration layer.
+
+## Mount the MCP server
+
+```yaml title="openclaw.yaml (sketch)"
+mcp_servers:
+  lighter:
+    command: lighter-mcp
+    args: ["stdio"]
+    env:
+      LIGHTER_KIT_PATH: /home/openclaw/lighter-agent-kit
+      LIGHTER_MCP_CONFIG: /home/openclaw/.lighter/lighter-mcp/config.toml
+```
+
+Restart the bot. The `lighter_*` tools become available to the agent
+runtime.
+
+## Recommended bot commands
+
+| Bot command          | Mapped MCP calls                                                        |
+| -------------------- | ----------------------------------------------------------------------- |
+| `/status`            | `lighter_health` + `lighter_safety_status`                              |
+| `/positions`         | `lighter_account_info` + `lighter_orders_open`                          |
+| `/funding [symbol]`  | `lighter_market_funding`                                                |
+| `/buy [symbol] [amount]` | preview: `lighter_live_market_order` (no token) → render plan; on `Approve` re-call with `confirmation_id` |
+| `/cancel-all`        | preview → `lighter_live_cancel_all`                                     |
+| `/kill`              | `lighter_live_cancel_all` then `lighter_live_close_all`, both gated     |
+
+## Confirmation rendering pattern
+
+```python
+preview = await mcp.call("lighter_live_market_order",
+                         {"symbol": "BTC", "side": "buy", "amount": 0.01})
+if preview.get("stage") == "preview":
+    plan = preview["plan"]
+    text = render_plan(plan)
+    keyboard = inline_keyboard([
+        ("Approve", f"confirm:{preview['confirmation_id']}"),
+        ("Cancel",  "cancel"),
+    ])
+    await send_message(text, keyboard)
+```
+
+When the user taps **Approve**, the callback re-issues the same call
+with `confirmation_id` populated. The MCP server validates the token
+against the original args digest; mismatches are rejected.
+
+## Notes
+
+- Telegram users need to be allowlisted at the bot layer; the MCP
+  server has no concept of Telegram identity.
+- Audit all messages going **into** the bot — Telegram is plaintext
+  for non-admin chats and shouldn't be the only audit trail.
+- The MCP audit log is still written on the server side, so you have a
+  durable record of every executed call regardless of bot UX.

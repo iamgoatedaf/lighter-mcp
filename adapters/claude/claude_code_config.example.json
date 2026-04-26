@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "lighter": {
+      "type": "stdio",
+      "command": "/ABSOLUTE/PATH/TO/.venv/bin/lighter-mcp",
+      "args": ["stdio"],
+      "env": {
+        "LIGHTER_MCP_CONFIG": "/Users/YOU/.lighter/lighter-mcp/config.toml"
+      }
+    }
+  }
+}

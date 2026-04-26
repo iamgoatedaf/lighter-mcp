@@ -1,0 +1,94 @@
+---
+title: "Generic MCP client"
+description: "Wire Lighter MCP into any MCP 1.2+ client by pointing it at the stdio or HTTP transport."
+---
+
+Lighter MCP speaks plain MCP 1.2+. Anything that can configure an MCP
+server entry can use it.
+
+## Stdio (recommended for local agents)
+
+```jsonc
+{
+  "mcpServers": {
+    "lighter": {
+      "command": "lighter-mcp",
+      "args": ["stdio"],
+      "env": {
+        "LIGHTER_KIT_PATH": "/Users/you/lighter-agent-kit",
+        "LIGHTER_MCP_CONFIG": "/Users/you/.lighter/lighter-mcp/config.toml"
+      }
+    }
+  }
+}
+```
+
+If `lighter-mcp` is not on the global `PATH`, use the absolute path,
+typically `~/.lighter/lighter-mcp/venv/bin/lighter-mcp`.
+
+## Streamable HTTP
+
+For daemon use (e.g. a long-running agent service that doesn't want
+to spawn a subprocess per session):
+
+```bash
+lighter-mcp serve --host 127.0.0.1 --port 8791
+```
+
+Then in the client:
+
+```jsonc
+{
+  "mcpServers": {
+    "lighter": {
+      "transport": "http",
+      "url": "http://127.0.0.1:8791"
+    }
+  }
+}
+```
+
+<Warning>
+The HTTP transport refuses to bind on a non-loopback address unless
+`--allow-remote` is passed. Even then, **the server has no built-in
+authentication** — front it with a TLS-terminating reverse proxy
+that enforces auth (nginx + mTLS, Cloudflare Access, Tailscale ACLs,
+etc.).
+</Warning>
+
+## Typical first calls
+
+The client should discover tools via the standard MCP `tools/list`
+method. After connecting, a quick health check:
+
+```jsonc
+{ "method": "tools/call", "params": { "name": "lighter_health" } }
+```
+
+If you get a `kit python or script not found` error, the env vars
+`LIGHTER_KIT_PATH` and/or `LIGHTER_MCP_CONFIG` aren't reaching the
+subprocess. Most clients have a "show server logs" feature — use it
+to confirm the env block was passed through.
+
+## Tool catalog by mode
+
+The number of tools surfaced via `tools/list` depends on the active
+mode:
+
+| Mode      | Number of tools |
+| --------- | :-------------: |
+| readonly  | 18              |
+| paper     | 29              |
+| live      | 37              |
+| funds     | 39              |
+
+If the catalog is smaller than expected, check the active mode with
+`lighter_safety_status`.
+
+## Building your own UI surfaces
+
+The shared slash commands and sub-agent prompts live in
+[`adapters/_shared/`](https://github.com/lighter-xyz/lighter-mcp/tree/main/adapters/_shared)
+and are written in plain Markdown. Even if your client doesn't have
+slash commands, you can paste those prompts into a project / system
+prompt to get the same UX expectations.

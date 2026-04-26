@@ -1,0 +1,496 @@
+---
+title: "Read-only tools"
+description: "15 MCP tools for market data and authenticated account reads. Always available, regardless of mode."
+---
+
+Read-only tools wrap `scripts/query.py` from the kit. They cannot place,
+modify, or cancel orders. They are registered in **every** mode — even
+in `readonly` they make up the entire tool catalog.
+
+<Note>
+Authenticated tools (marked ✅ below) require credentials in
+`~/.lighter/lighter-agent-kit/credentials` or as
+`LIGHTER_API_PRIVATE_KEY` / `LIGHTER_ACCOUNT_INDEX` /
+`LIGHTER_API_KEY_INDEX` env vars. Use `lighter_auth_status` to verify
+without making a network call.
+</Note>
+
+## At a glance
+
+| Tool                              | Auth | Typical use                                       |
+| --------------------------------- | :--: | ------------------------------------------------- |
+| `lighter_system_status`           | —    | Health-check the exchange.                        |
+| `lighter_list_markets`            | —    | Map symbols → `market_index`.                     |
+| `lighter_market_stats`            | —    | 24h prices / volumes / funding overview.          |
+| `lighter_market_info`             | —    | Fees, decimals, minimum sizes for a market.       |
+| `lighter_market_book`             | —    | Top-of-book bids/asks snapshot.                   |
+| `lighter_market_trades`           | —    | Recent fills tape.                                |
+| `lighter_market_candles`          | —    | OHLCV at 1m / 5m / 15m / 30m / 1h / 4h / 1d.      |
+| `lighter_market_funding`          | —    | Current and recent funding for one perp.          |
+| `lighter_auth_status`             | —    | Local credential introspection (no network).     |
+| `lighter_account_info`            | opt  | Balances, positions, assets for any account.      |
+| `lighter_account_apikeys`         | opt  | Public API-key listing for an account index.      |
+| `lighter_account_limits`          | ✅   | Current trading tier and rate limits.             |
+| `lighter_portfolio_performance`   | ✅   | PnL series at the chosen resolution.              |
+| `lighter_orders_open`             | ✅   | Live open orders, optionally filtered by symbol.  |
+| `lighter_orders_history`          | ✅   | Past orders for the configured account.           |
+
+---
+
+## `lighter_system_status`
+
+System health and chain status from Lighter. Public.
+
+<ResponseField name="code" type="integer">200 on success.</ResponseField>
+<ResponseField name="status" type="string">`"ok"` when healthy.</ResponseField>
+<ResponseField name="network" type="string">`"mainnet"` / `"testnet"`.</ResponseField>
+<ResponseField name="block_height" type="integer">Last finalized L2 block.</ResponseField>
+
+<AccordionGroup>
+  <Accordion title="Common errors" icon="circle-exclamation">
+    | Symptom                                              | Likely cause                                          | Fix                                                                  |
+    | ---------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------- |
+    | `kit python or script not found`                     | `kit_path` wrong, or kit's venv not built.            | Re-run the kit installer; verify `kit_path`.                         |
+    | `kit script query.py timed out after 60s`            | Network blocked or `host` unreachable.                | Check `host`; try `curl https://mainnet.zklighter.elliot.ai/api/v1/status`. |
+    | `code != 200`                                        | Lighter reports degraded service.                     | Wait and retry; consider testnet for development.                    |
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## `lighter_list_markets`
+
+Compact `symbol → market_index` catalog.
+
+<ParamField path="market_type" type="'perp' | 'spot' | null" default="null">
+  Optional filter. Omit for both.
+</ParamField>
+
+<ParamField path="search" type="string | null" default="null">
+  Case-insensitive substring filter against the symbol.
+</ParamField>
+
+```json title="Response (truncated)"
+[
+  { "symbol": "BTC", "market_index": 0, "market_type": "perp" },
+  { "symbol": "ETH", "market_index": 1, "market_type": "perp" },
+  { "symbol": "ETH/USDC", "market_index": 200, "market_type": "spot" }
+]
+```
+
+<AccordionGroup>
+  <Accordion title="Common errors" icon="circle-exclamation">
+    | Symptom                              | Likely cause                       | Fix                                                          |
+    | ------------------------------------ | ---------------------------------- | ------------------------------------------------------------ |
+    | Empty list                           | Filter is too narrow.              | Drop `search` or broaden `market_type`.                      |
+    | Pydantic `market_type` rejection     | Value not exactly `perp` or `spot`. | Use lowercase `perp` or `spot`; nothing else accepted.       |
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## `lighter_market_stats`
+
+Market overview: prices, 24h volumes, funding.
+
+<ParamField path="symbol" type="string | null" default="null">
+  Optional filter. Omit to retrieve every listed market.
+</ParamField>
+
+```json title="Response (one symbol)"
+{
+  "exchange_stats": [
+    {
+      "symbol": "BTC",
+      "market_id": 0,
+      "last_trade_price": "67234.21",
+      "mark_price": "67230.10",
+      "index_price": "67232.55",
+      "volume_24h_usd": "543219888",
+      "open_interest_usd": "188400123",
+      "funding_rate_8h": "0.00012"
+    }
+  ]
+}
+```
+
+<AccordionGroup>
+  <Accordion title="Common errors" icon="circle-exclamation">
+    | Symptom                       | Likely cause                                  | Fix                                              |
+    | ----------------------------- | --------------------------------------------- | ------------------------------------------------ |
+    | `unknown symbol: <X>`         | Symbol not listed on this venue.              | Call `lighter_list_markets` first to discover.   |
+    | Unexpected casing (`btc`)     | The schema uppercases automatically.          | No action — value is normalized before kit call. |
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## `lighter_market_info`
+
+Per-market metadata: fees, decimals, minimum sizes.
+
+<ParamField path="symbol" type="string | null" default="null">
+  Omit to list every market.
+</ParamField>
+
+```json title="Response (excerpt)"
+{
+  "order_books": [
+    {
+      "symbol": "ETH",
+      "market_id": 1,
+      "market_type": "perp",
+      "status": "active",
+      "taker_fee": "0.00045",
+      "maker_fee": "0.00010",
+      "min_base_amount": "0.0001",
+      "min_quote_amount": "10",
+      "supported_size_decimals": 4,
+      "supported_price_decimals": 2
+    }
+  ]
+}
+```
+
+<Tip>
+`supported_size_decimals` and `supported_price_decimals` are what
+`trade.py` uses internally to scale human prices/amounts into integer
+ticks/lots. The kit echoes back the effective values it used after each
+order — see `effective_amount` / `effective_price` in
+[Live trading](/tools/live).
+</Tip>
+
+---
+
+## `lighter_market_book`
+
+Top-of-book bids and asks for one market.
+
+<ParamField path="symbol" type="string" required>Market symbol.</ParamField>
+<ParamField path="limit" type="integer" default="10">Levels per side (1–200).</ParamField>
+
+```json title="Response"
+{
+  "code": 200,
+  "asks": [{ "price": "2244.08", "remaining_base_amount": "88.92" }],
+  "bids": [{ "price": "2244.00", "remaining_base_amount": "12.10" }],
+  "total_asks": 20,
+  "total_bids": 20
+}
+```
+
+<AccordionGroup>
+  <Accordion title="Common errors" icon="circle-exclamation">
+    | Symptom                                       | Likely cause                          | Fix                                                          |
+    | --------------------------------------------- | ------------------------------------- | ------------------------------------------------------------ |
+    | `Input should be less than or equal to 200`   | `limit` exceeds upper bound.          | Use a value ≤ 200.                                           |
+    | Empty `asks`/`bids`                           | Market has no resting orders.         | Try a more liquid symbol or wait.                            |
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## `lighter_market_trades`
+
+Recent fills tape for one market.
+
+<ParamField path="symbol" type="string" required />
+<ParamField path="limit" type="integer" default="50">1–500.</ParamField>
+
+```json title="Response (one row)"
+{
+  "trades": [
+    {
+      "trade_id": 4577322,
+      "size": "0.0001",
+      "price": "2243.85",
+      "is_maker_ask": false,
+      "timestamp": 1775622620404,
+      "tx_hash": "0x..."
+    }
+  ]
+}
+```
+
+<AccordionGroup>
+  <Accordion title="Common errors" icon="circle-exclamation">
+    | Symptom                  | Likely cause                                   | Fix                          |
+    | ------------------------ | ---------------------------------------------- | ---------------------------- |
+    | Same trade returned twice | Caller deduplication wrong; `trade_id` is unique. | Dedupe by `trade_id`.    |
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## `lighter_market_candles`
+
+OHLCV candles for one market.
+
+<ParamField path="symbol" type="string" required />
+<ParamField path="resolution" type="enum" default="1h">
+  One of `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1d`.
+</ParamField>
+<ParamField path="count_back" type="integer" default="100">
+  Number of buckets returned (1–1000), anchored at the latest closed bucket.
+</ParamField>
+
+```json title="Response (one bucket)"
+{
+  "r": "1h",
+  "c": [
+    { "t": 1776646800000, "o": 2278.62, "h": 2293.85, "l": 2276.55, "c": 2284.93, "v": 13655.42 }
+  ]
+}
+```
+
+<AccordionGroup>
+  <Accordion title="Common errors" icon="circle-exclamation">
+    | Symptom                                              | Likely cause                                     | Fix                                                                |
+    | ---------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------ |
+    | Pydantic `resolution` rejection                      | Value not in the allowed set.                    | Use one of `1m / 5m / 15m / 30m / 1h / 4h / 1d`.                   |
+    | Fewer candles than requested                         | Market is too new; no history yet.               | Reduce `count_back` or pick an older market.                       |
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## `lighter_market_funding`
+
+Current and recent funding rate for one **perpetual** market.
+
+<ParamField path="symbol" type="string" required />
+
+```json title="Response"
+{
+  "funding_rates": [
+    { "market_id": 0, "exchange": "lighter", "symbol": "BTC", "rate": 0.00012 }
+  ]
+}
+```
+
+<Tip>
+`rate` is the API's normalized **8-hour-equivalent** value across
+exchanges, even when the underlying venue updates funding hourly.
+This makes cross-venue comparison meaningful.
+</Tip>
+
+<AccordionGroup>
+  <Accordion title="Common errors" icon="circle-exclamation">
+    | Symptom                                 | Likely cause                          | Fix                                                          |
+    | --------------------------------------- | ------------------------------------- | ------------------------------------------------------------ |
+    | Empty `funding_rates`                   | Symbol is spot, not perp.             | Funding only exists for perpetuals.                          |
+    | Single-venue rate looks off             | Venue's native interval differs.      | Compare via the API's normalized 8-h-equivalent value.       |
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## `lighter_auth_status`
+
+**Local-only** credential check. Never touches the network. Never loads
+the SDK. Safe on cold sessions.
+
+```json title="Response"
+{
+  "status": "ok",
+  "auth_capable": true,
+  "host": "https://mainnet.zklighter.elliot.ai",
+  "account_index": 41,
+  "api_key_index": 123,
+  "sources": {
+    "LIGHTER_API_PRIVATE_KEY": "credentials_file",
+    "LIGHTER_ACCOUNT_INDEX": "credentials_file",
+    "LIGHTER_API_KEY_INDEX": "credentials_file",
+    "LIGHTER_HOST": "default"
+  },
+  "credentials_file": {
+    "path": "/Users/you/.lighter/lighter-agent-kit/credentials",
+    "present": true,
+    "mode_secure": true
+  },
+  "missing": []
+}
+```
+
+`auth_capable` is `true` iff `missing` is empty. The private-key value
+is **never** returned — only its source.
+
+<AccordionGroup>
+  <Accordion title="Common errors" icon="circle-exclamation">
+    | Symptom                                                        | Likely cause                                              | Fix                                                                            |
+    | -------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------ |
+    | `auth_capable: false`, `missing: ["LIGHTER_API_PRIVATE_KEY"]`  | Credentials file missing or env not exported.             | Run the kit's onboarding flow, or `export` the missing var.                    |
+    | `credentials_file.mode_secure: false`                          | File is group/world-readable.                             | `chmod 600 ~/.lighter/lighter-agent-kit/credentials`.                          |
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## `lighter_account_info`
+
+Balances, positions, assets for an account.
+
+<ParamField path="account_index" type="integer | null" default="null">
+  Public lookup if provided. Omit to use the credentialed account.
+</ParamField>
+
+```json title="Response (excerpt)"
+{
+  "accounts": [
+    {
+      "index": 41,
+      "l1_address": "0x...",
+      "collateral": "10500.00",
+      "available_balance": "9300.00",
+      "positions": [
+        {
+          "market_id": 0,
+          "symbol": "BTC",
+          "sign": 1,
+          "position": "0.05",
+          "avg_entry_price": "65000.00",
+          "unrealized_pnl": "111.00",
+          "liquidation_price": "60100.00"
+        }
+      ]
+    }
+  ]
+}
+```
+
+<AccordionGroup>
+  <Accordion title="Common errors" icon="circle-exclamation">
+    | Symptom                                              | Likely cause                                                | Fix                                                            |
+    | ---------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------- |
+    | Auth-style failure                                   | No `account_index` provided **and** no credentials present. | Pass `account_index` for a public read, or load credentials.   |
+    | `positions[]` empty but you expect open trades       | API filters to non-zero positions by default.               | Use the kit CLI directly with `--include_zero_positions`.       |
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## `lighter_account_apikeys`
+
+Public API-key listing for an account. No private material is ever
+returned — only key indices and metadata.
+
+<ParamField path="account_index" type="integer | null" default="null">
+  Omit to use the credentialed account.
+</ParamField>
+
+---
+
+## `lighter_account_limits`
+
+Authenticated. Current trading tier and per-tier limits.
+
+```json title="Response"
+{
+  "user_tier": "premium_2",
+  "current_maker_fee_tick": -1,
+  "current_taker_fee_tick": 4,
+  "max_llp_percentage": 100,
+  "effective_lit_stakes": "5000.00000000"
+}
+```
+
+<AccordionGroup>
+  <Accordion title="Common errors" icon="circle-exclamation">
+    | Symptom                                  | Likely cause                | Fix                                                                     |
+    | ---------------------------------------- | --------------------------- | ----------------------------------------------------------------------- |
+    | Error envelope mentioning missing keys   | No credentials loaded.      | Run `lighter_auth_status`; fix `missing[]` before retrying.             |
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## `lighter_portfolio_performance`
+
+Authenticated. PnL time series at the chosen resolution.
+
+<ParamField path="resolution" type="enum" default="1h">
+  Same set as `lighter_market_candles`.
+</ParamField>
+
+```json title="Response (one bucket)"
+{
+  "resolution": "1h",
+  "pnl": [
+    {
+      "timestamp": 1775606400,
+      "trade_pnl": -10000,
+      "inflow": 10000,
+      "outflow": 0,
+      "volume": 153880.65
+    }
+  ]
+}
+```
+
+---
+
+## `lighter_orders_open`
+
+Authenticated. Currently open orders for the configured account.
+
+<ParamField path="symbol" type="string | null" default="null">
+  Omit for all symbols.
+</ParamField>
+
+```json title="Response (one row)"
+{
+  "orders": [
+    {
+      "order_index": 281474983018026,
+      "client_order_index": 79084886055,
+      "market_index": 0,
+      "is_ask": true,
+      "type": "limit",
+      "status": "open",
+      "initial_base_amount": "0.05",
+      "remaining_base_amount": "0.05",
+      "price": "67500.00"
+    }
+  ]
+}
+```
+
+<Tip>
+The `client_order_index` field is what the cancel / modify flows take.
+Don't confuse it with `order_index` — they're different IDs.
+</Tip>
+
+<AccordionGroup>
+  <Accordion title="Common errors" icon="circle-exclamation">
+    | Symptom                                                       | Likely cause                              | Fix                                                                  |
+    | ------------------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------- |
+    | Order shows `status: "filled"` immediately after placing      | It was an IOC/market order.               | Filled IOC orders aren't "open" anymore — call `lighter_orders_history`. |
+    | Filter returns nothing for a symbol you have orders on        | Symbol normalization mismatch.            | Use the canonical uppercase symbol from `lighter_list_markets`.   |
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## `lighter_orders_history`
+
+Authenticated. Past orders for the configured account, paginated by
+`cursor` server-side. The MCP wrapper currently returns the first page
+returned by the kit; for deep paging, drive
+`query.py orders history --cursor=...` directly via the shell.
+
+<AccordionGroup>
+  <Accordion title="Common errors" icon="circle-exclamation">
+    | Symptom                                  | Likely cause                       | Fix                                              |
+    | ---------------------------------------- | ---------------------------------- | ------------------------------------------------ |
+    | Older fills missing                      | First-page-only result.            | Use the kit CLI with explicit `--cursor`.        |
+    | Authentication error                     | No credentials loaded.             | See `lighter_auth_status`.                       |
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## See also
+
+- [Error envelope](/reference/error-envelope) — uniform shape every read failure collapses into.
+- [Diagnostics](/tools/diagnostics) — `lighter_health` for a single-call health snapshot.
+- [Audit log](/reference/audit-log) — how each call is recorded.

@@ -1,0 +1,124 @@
+---
+title: "Installation"
+description: "Install lighter-mcp and the underlying lighter-agent-kit on macOS or Linux in about 5 minutes."
+---
+
+<Note>
+Total time: ~5 minutes. This guide assumes a fresh machine. If you already
+have `lighter-agent-kit` installed, skip to [Step 2](#step-2-install-lighter-mcp).
+</Note>
+
+## Prerequisites
+
+<CardGroup cols={2}>
+  <Card title="Python 3.10+" icon="python">
+    `python3.11` is recommended. The installer auto-detects whichever interpreter is on `PATH`.
+  </Card>
+  <Card title="Node.js (optional)" icon="node-js">
+    Only needed if you plan to edit / preview this docs site locally (Mintlify CLI).
+  </Card>
+  <Card title="macOS or Linux" icon="apple">
+    Tested on macOS 14+ and Ubuntu 22.04+. Windows works for the server itself but the per-platform adapters use symlinks — run `adapters/_shared/sync.sh` to materialize them.
+  </Card>
+  <Card title="A Lighter account" icon="user">
+    For paper / read-only you don't need credentials. For live trading, finish the kit's onboarding to populate `~/.lighter/lighter-agent-kit/credentials`.
+  </Card>
+</CardGroup>
+
+## Step 1 — Install lighter-agent-kit
+
+Lighter MCP is a thin wrapper around the official kit, so the kit must
+exist first.
+
+<CodeGroup>
+```bash One-liner
+curl -fsSL https://github.com/elliottech/lighter-agent-kit/releases/latest/download/install.sh | bash
+```
+
+```bash Manual clone
+git clone https://github.com/elliottech/lighter-agent-kit ~/lighter-agent-kit
+cd ~/lighter-agent-kit
+bash install.sh
+```
+</CodeGroup>
+
+The kit installer creates a venv at `~/lighter-agent-kit/.venv/` and pins
+all SDK dependencies. Verify it works:
+
+```bash
+~/lighter-agent-kit/.venv/bin/python ~/lighter-agent-kit/scripts/query.py system status
+# {"code": 200, "status": "ok", ...}
+```
+
+## Step 2 — Install lighter-mcp
+
+```bash
+git clone https://github.com/lighter-xyz/lighter-mcp
+cd lighter-mcp
+bash install.sh --kit-path ~/lighter-agent-kit
+```
+
+<Steps>
+  <Step title="Locate Python ≥ 3.10">
+    The script picks the highest-version interpreter on `PATH`.
+  </Step>
+  <Step title="Create the MCP venv">
+    Built at `~/.lighter/lighter-mcp/venv/`. Isolated from the kit's venv so dependency upgrades on either side don't collide.
+  </Step>
+  <Step title="Install the package editable">
+    `pip install -e .` so subsequent `git pull`s pick up new tools without reinstalling.
+  </Step>
+  <Step title="Write a default config">
+    A `config.toml` at `~/.lighter/lighter-mcp/config.toml` in `readonly` mode. You promote it later.
+  </Step>
+  <Step title="Run lighter-mcp doctor">
+    A non-interactive smoke check that confirms the kit is reachable and Lighter responds.
+  </Step>
+</Steps>
+
+If `doctor` prints a green health envelope (`{"ok": true, ...}`), you're done.
+
+## Step 3 — Connect your agent
+
+Pick the adapter that matches your runtime:
+
+<CardGroup cols={3}>
+  <Card title="Cursor" icon="code" href="/adapters/cursor">Adds the MCP server + slash commands + sub-agent + a `.cursor/rules/lighter.mdc` rule file.</Card>
+  <Card title="Claude Code" icon="terminal" href="/adapters/claude-code">CLI agent. SKILL.md + slash commands + lighter-trader sub-agent.</Card>
+  <Card title="Claude Desktop" icon="desktop" href="/adapters/claude-desktop">Hand-edit `claude_desktop_config.json` to point at the MCP server.</Card>
+  <Card title="Codex" icon="laptop-code" href="/adapters/codex">SKILL.md + Codex plugin. Wires up commands and sub-agent.</Card>
+  <Card title="OpenClaw / Telegram" icon="robot" href="/adapters/openclaw">Bot-side mapping doc — UI lives in the bot.</Card>
+  <Card title="Generic MCP" icon="plug" href="/adapters/generic">Any other client. Manual `mcp_servers` entry.</Card>
+</CardGroup>
+
+## Verifying
+
+After connecting, ask your agent:
+
+> What's the current funding rate for BTC on Lighter?
+
+The agent should call `lighter_market_funding` with `symbol = "BTC"` and
+return the answer. If you get a permission or "tool not found" error,
+double-check that the MCP server is enabled in the agent's config and
+that `lighter-mcp doctor` still passes from the shell.
+
+## Updating
+
+```bash
+cd /path/to/lighter-mcp && git pull
+~/.lighter/lighter-mcp/venv/bin/pip install -e .
+~/.lighter/lighter-mcp/venv/bin/lighter-mcp doctor
+```
+
+The audit log, daily-notional ledger, and config are kept in
+`~/.lighter/lighter-mcp/` and survive reinstalls.
+
+## Uninstalling
+
+```bash
+rm -rf ~/.lighter/lighter-mcp
+# and remove the lighter-mcp folder you cloned
+```
+
+The kit (`~/lighter-agent-kit`) is independent — uninstall separately
+if you no longer need it.

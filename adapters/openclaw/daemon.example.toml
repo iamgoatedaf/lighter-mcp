@@ -1,0 +1,13 @@
+# Sample process supervisor entry for the OpenClaw deployment.
+# Adapt to systemd / launchd / pm2 / docker-compose as needed.
+
+[process]
+name = "lighter-mcp"
+command = "/ABSOLUTE/PATH/TO/.venv/bin/lighter-mcp"
+args = ["serve", "--host", "127.0.0.1", "--port", "8791"]
+environment = [
+    "LIGHTER_MCP_CONFIG=/Users/YOU/.lighter/lighter-mcp/config.toml",
+]
+restart = "on-failure"
+working_directory = "/Users/YOU"
+user = "YOU"

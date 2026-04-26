@@ -1,0 +1,162 @@
+---
+title: "Funds & withdrawals"
+description: "2 MCP tools for moving and withdrawing assets. Always two-step confirmed; cap-gated; only registered when mode = funds."
+---
+
+<Warning>
+**Withdrawals are irreversible.** They move assets off Lighter to your
+L1 address. Read the [disclaimer](/security/disclaimer) before
+enabling. The two-step confirmation flow is **always on** for funds
+tools regardless of `require_confirmation`.
+</Warning>
+
+Funds tools wrap the `funds` subcommands of `scripts/trade.py`. They
+are registered **only** when `mode = "funds"` and the corresponding
+`[funds]` flag is enabled.
+
+| Tool                       | Gate flag                  | Confirms? |
+| -------------------------- | -------------------------- | :-------: |
+| `lighter_funds_withdraw`   | `funds.withdrawals_enabled`| ✅ always |
+| `lighter_funds_transfer`   | `funds.transfers_enabled`  | ✅ always |
+
+---
+
+## `lighter_funds_withdraw`
+
+Withdraw an asset off Lighter to your L1 address.
+
+<ParamField path="asset" type="string" required>
+  Asset symbol, e.g. `USDC`, `ETH`. Validated against `^[A-Z0-9][A-Z0-9._-]{0,15}$`.
+</ParamField>
+<ParamField path="amount" type="float" required>Amount to withdraw, > 0.</ParamField>
+<ParamField path="route" type="'perp' | 'spot'" default="perp">
+  Which route the asset is sourced from.
+</ParamField>
+<ParamField path="confirmation_id" type="string | null" default="null">
+  Omit on the first call to receive a preview. Include on the second call
+  to execute.
+</ParamField>
+
+**Pre-execution gates**
+
+1. `safety.require_withdrawals_enabled()` — `[funds].withdrawals_enabled`
+   must be `true`.
+2. `safety.check_withdrawal_amount_usd(amount)` —
+   `[funds].max_withdrawal_usd`.
+3. **Two-step confirmation, always.** First call returns a preview with
+   `confirmation_id`; second call executes.
+
+```json title="Preview envelope"
+{
+  "ok": true,
+  "stage": "preview",
+  "tool": "lighter_funds_withdraw",
+  "plan": {
+    "action": "withdraw",
+    "asset": "USDC",
+    "amount": 250.0,
+    "route": "perp",
+    "warning": "Withdrawals are irreversible."
+  },
+  "confirmation_id": "be4c...9911",
+  "expires_at": 1782800400.0
+}
+```
+
+---
+
+## `lighter_funds_transfer`
+
+Move an asset between **spot** and **perp** routes on the same account.
+Useful e.g. before a withdrawal that requires the asset to be on the
+spot side.
+
+<ParamField path="asset" type="string" required>Asset symbol.</ParamField>
+<ParamField path="amount" type="float" required>Amount to move, > 0.</ParamField>
+<ParamField path="from_route" type="'perp' | 'spot'" required />
+<ParamField path="to_route" type="'perp' | 'spot'" required>
+  Must differ from `from_route`.
+</ParamField>
+<ParamField path="confirmation_id" type="string | null" default="null" />
+
+**Pre-execution gates**
+
+1. `safety.require_transfers_enabled()` —
+   `[funds].transfers_enabled` must be `true`.
+2. Validation: `from_route != to_route`. Same-route transfers return:
+
+   ```json
+   { "ok": false, "category": "validation", "error": "from_route and to_route must differ." }
+   ```
+
+3. **Two-step confirmation, always.**
+
+```json title="Preview envelope"
+{
+  "ok": true,
+  "stage": "preview",
+  "tool": "lighter_funds_transfer",
+  "plan": {
+    "action": "transfer",
+    "asset": "USDC",
+    "amount": 100.0,
+    "from_route": "perp",
+    "to_route": "spot"
+  },
+  "confirmation_id": "1d2f...77ab",
+  "expires_at": 1782800400.0
+}
+```
+
+---
+
+## Common errors
+
+<AccordionGroup>
+  <Accordion title="Safety envelope" icon="shield-halved">
+    | `error` text                                                          | Fix                                                                          |
+    | --------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+    | `withdrawals are not enabled in this server's config`                 | Set `funds.withdrawals_enabled = true` and restart.                          |
+    | `transfers are not enabled in this server's config`                   | Set `funds.transfers_enabled = true` and restart.                            |
+    | `withdrawal 5000.00 USD exceeds funds.max_withdrawal_usd=1000.00`     | Lower the amount or raise the cap.                                           |
+    | `from_route and to_route must differ.`                                | Pick different routes.                                                       |
+  </Accordion>
+
+  <Accordion title="Confirmation envelope" icon="key">
+    | `error` text                                              | Fix                                                                          |
+    | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
+    | `unknown confirmation token`                              | Re-issue a preview; copy the new `confirmation_id` exactly.                  |
+    | `confirmation token expired`                              | TTL passed (default 120s). Re-issue.                                         |
+    | `confirmation token bound to different tool/args`         | Args changed between preview and execute. Re-issue with the final args.      |
+  </Accordion>
+
+  <Accordion title="Runner errors" icon="circle-exclamation">
+    | Symptom                                              | Likely cause                                | Fix                                                                  |
+    | ---------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------- |
+    | `{"error": "insufficient balance ..."}`              | Asset not present on the chosen `route`.    | Transfer first, or pick the correct `route`.                         |
+    | `{"error": "withdrawal address not whitelisted"}`    | Whitelist gate on the venue side.           | Whitelist your L1 address in the Lighter UI.                         |
+    | `kit script trade.py timed out after 60s`            | Network or signing issue.                   | `lighter-mcp doctor`; retry.                                         |
+  </Accordion>
+</AccordionGroup>
+
+## Defensive patterns
+
+<CardGroup cols={2}>
+  <Card title="Pin a tight withdrawal cap" icon="vault">
+    Set `funds.max_withdrawal_usd` to the smallest value your strategy
+    can tolerate. The cap is the simplest defense against an
+    over-eager agent.
+  </Card>
+  <Card title="Disable transfers if not needed" icon="ban">
+    `funds.transfers_enabled = false` removes the tool from the catalog
+    entirely. Don't enable risk surfaces you don't actively use.
+  </Card>
+  <Card title="Inspect the preview" icon="magnifying-glass">
+    The preview's `plan` field is what your user is approving. Always
+    surface it verbatim, never paraphrase it.
+  </Card>
+  <Card title="Use a fresh confirmation per attempt" icon="rotate">
+    Tokens are single-use. If a withdrawal fails on the kit side,
+    re-issue a new preview rather than retrying with the old token.
+  </Card>
+</CardGroup>

@@ -1,0 +1,52 @@
+---
+title: "Agent adapters"
+description: "Pre-built UX layers for Cursor, Claude Code, Claude Desktop, Codex, OpenClaw, and generic MCP clients."
+---
+
+The MCP server itself is platform-agnostic — any MCP 1.2+ client can
+talk to it. The `adapters/` folder ships a pre-built UI layer per
+platform on top of the same MCP tools, so you get slash commands,
+sub-agents, and platform-specific rules without writing them yourself.
+
+## Coverage
+
+| Platform        | MCP tools | SKILL / system prompt | Slash commands | Sub-agent | Hook | Install                                          |
+| --------------- | :-------: | :-------------------: | :------------: | :-------: | :--: | ------------------------------------------------ |
+| Cursor          | ✅        | rule (`.mdc`)         | ✅             | ✅        | ✅   | `bash install.sh --adapter cursor`               |
+| Claude Code     | ✅        | SKILL.md              | ✅             | ✅        | ✅   | `bash install.sh --adapter claude`               |
+| Codex           | ✅        | SKILL.md              | ✅             | ✅        | ✅   | `bash install.sh --adapter codex`                |
+| Claude Desktop  | ✅        | SKILL paste           | ❌             | ❌        | ❌   | manual                                           |
+| OpenClaw / TG   | ✅        | mapping doc           | bot-side       | ❌        | bot-side | manual                                       |
+| Generic MCP     | ✅        | by hand               | —              | —         | —    | manual                                           |
+
+## Shared UI surfaces
+
+The slash commands and sub-agent live in [`adapters/_shared/`](https://github.com/lighter-xyz/lighter-mcp/tree/main/adapters/_shared)
+and are symlinked from each per-platform folder. The single source of
+truth for prompts is therefore versioned once and inherited everywhere.
+
+| Command              | What it does |
+| -------------------- | ------------ |
+| `/lighter-status`    | Active mode, daily-notional remaining, equity, open orders. |
+| `/lighter-positions` | Positions with entry / mark / PnL / liq distance. |
+| `/lighter-kill`      | Panic close: `cancel_all` + `close_all`, two-step confirm with the literal word `confirm`. |
+| `/lighter-paper`     | Switch active mode to paper. Prompts before editing config. |
+| `/lighter-audit`     | Tail the audit log with filters (last N hours, only failures, by tool). |
+
+Plus a dedicated **`lighter-trader` sub-agent** with a narrow
+`lighter_*`-only tool budget that:
+
+- Cannot edit source files.
+- Refuses to chain a `kill` without an explicit confirmation word.
+- Always reads `lighter_safety_status` before composing a write.
+
+## Pick your adapter
+
+<CardGroup cols={3}>
+  <Card title="Cursor" icon="code" href="/adapters/cursor" />
+  <Card title="Claude Code" icon="terminal" href="/adapters/claude-code" />
+  <Card title="Claude Desktop" icon="desktop" href="/adapters/claude-desktop" />
+  <Card title="Codex" icon="laptop-code" href="/adapters/codex" />
+  <Card title="OpenClaw" icon="robot" href="/adapters/openclaw" />
+  <Card title="Generic MCP" icon="plug" href="/adapters/generic" />
+</CardGroup>

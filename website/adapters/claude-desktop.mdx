@@ -1,0 +1,81 @@
+---
+title: "Claude Desktop"
+description: "Manual install for Claude Desktop. No slash commands or sub-agent — paste the SKILL into a project."
+---
+
+Claude Desktop supports MCP servers via `claude_desktop_config.json`,
+but does **not** support slash commands or sub-agents. The integration
+is therefore minimal: the MCP tools are available in any conversation
+where the project rules permit it, and you paste the SKILL into a
+custom project to prime the agent.
+
+## Configure the MCP server
+
+Edit `claude_desktop_config.json`:
+
+<Tabs>
+  <Tab title="macOS">
+    `~/Library/Application Support/Claude/claude_desktop_config.json`
+  </Tab>
+  <Tab title="Windows">
+    `%APPDATA%\Claude\claude_desktop_config.json`
+  </Tab>
+  <Tab title="Linux">
+    `~/.config/Claude/claude_desktop_config.json`
+  </Tab>
+</Tabs>
+
+```json
+{
+  "mcpServers": {
+    "lighter": {
+      "command": "lighter-mcp",
+      "args": ["stdio"],
+      "env": {
+        "LIGHTER_KIT_PATH": "/Users/you/lighter-agent-kit"
+      }
+    }
+  }
+}
+```
+
+If `lighter-mcp` is not on the global PATH (e.g. it's in
+`~/.lighter/lighter-mcp/venv/bin/lighter-mcp`), use the absolute path
+in `command`.
+
+## Restart Claude
+
+Quit completely (⌘-Q on macOS) and reopen. The Lighter tools should
+appear in the model selector / tools panel.
+
+## Project SKILL
+
+Paste the contents of [`adapters/claude-desktop/SKILL.md`](https://github.com/lighter-xyz/lighter-mcp/blob/main/adapters/claude-desktop/SKILL.md)
+into a Claude Desktop **project** (Settings → Projects → Custom
+instructions). This primes the agent on:
+
+- Mode model (`readonly` → `paper` → `live` → `funds`).
+- The two-step confirmation flow.
+- Reading `lighter_safety_status` before composing writes.
+- Refusing to chain destructive actions without explicit approval.
+
+## Limitations
+
+<Warning>
+Claude Desktop has **no slash commands** and **no sub-agent**, so the
+shared UX surfaces from `adapters/_shared/` are not directly available.
+You can simulate `/lighter-status` etc. by asking in plain English —
+the agent will call the right tools.
+</Warning>
+
+## Verifying
+
+Start a fresh conversation and ask:
+
+> What's BTC trading at on Lighter right now, and what mode is the MCP
+> server in?
+
+You should see the model invoke `lighter_market_stats` and
+`lighter_safety_status`. If the tool list is empty, double-check
+`claude_desktop_config.json` is valid JSON and that Claude was
+restarted.
