@@ -32,11 +32,11 @@ dev = [
 ]
 
 [project.urls]
-Homepage      = "https://github.com/lighter-xyz/lighter-mcp"
-Source        = "https://github.com/lighter-xyz/lighter-mcp"
-Issues        = "https://github.com/lighter-xyz/lighter-mcp/issues"
-Changelog     = "https://github.com/lighter-xyz/lighter-mcp/blob/main/CHANGELOG.md"
-Documentation = "https://github.com/lighter-xyz/lighter-mcp/blob/main/README.md"
+Homepage      = "https://github.com/iamgoatedaf/lighter-mcp"
+Source        = "https://github.com/iamgoatedaf/lighter-mcp"
+Issues        = "https://github.com/iamgoatedaf/lighter-mcp/issues"
+Changelog     = "https://github.com/iamgoatedaf/lighter-mcp/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/iamgoatedaf/lighter-mcp/blob/main/README.md"
 
 [project.scripts]
 lighter-mcp = "lighter_mcp.server:main"

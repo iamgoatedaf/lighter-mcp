@@ -1,6 +1,6 @@
 # Lighter MCP Toolkit
 
-[![CI](https://github.com/lighter-xyz/lighter-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/lighter-xyz/lighter-mcp/actions/workflows/ci.yml)
+[![CI](https://github.com/iamgoatedaf/lighter-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/iamgoatedaf/lighter-mcp/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-1.2%2B-purple.svg)](https://modelcontextprotocol.io)
@@ -49,7 +49,7 @@ git clone https://github.com/elliottech/lighter-agent-kit ~/lighter-agent-kit
 cd ~/lighter-agent-kit && bash install.sh   # follow its README
 
 # 2. Install lighter-mcp + a default readonly config
-git clone https://github.com/lighter-xyz/lighter-mcp
+git clone https://github.com/iamgoatedaf/lighter-mcp
 cd lighter-mcp
 bash install.sh --kit-path ~/lighter-agent-kit
 

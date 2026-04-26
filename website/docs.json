@@ -34,7 +34,7 @@
     ],
     "primary": {
       "type": "github",
-      "href": "https://github.com/lighter-xyz/lighter-mcp"
+      "href": "https://github.com/iamgoatedaf/lighter-mcp"
     }
   },
   "navigation": {
@@ -131,7 +131,7 @@
       "anchors": [
         {
           "anchor": "GitHub",
-          "href": "https://github.com/lighter-xyz/lighter-mcp",
+          "href": "https://github.com/iamgoatedaf/lighter-mcp",
           "icon": "github"
         },
         {
@@ -149,16 +149,16 @@
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/lighter-xyz/lighter-mcp",
+      "github": "https://github.com/iamgoatedaf/lighter-mcp",
       "x": "https://x.com/lighter_xyz"
     },
     "links": [
       {
         "header": "Project",
         "items": [
-          { "label": "GitHub", "href": "https://github.com/lighter-xyz/lighter-mcp" },
-          { "label": "Issues", "href": "https://github.com/lighter-xyz/lighter-mcp/issues" },
-          { "label": "Changelog", "href": "https://github.com/lighter-xyz/lighter-mcp/blob/main/CHANGELOG.md" }
+          { "label": "GitHub", "href": "https://github.com/iamgoatedaf/lighter-mcp" },
+          { "label": "Issues", "href": "https://github.com/iamgoatedaf/lighter-mcp/issues" },
+          { "label": "Changelog", "href": "https://github.com/iamgoatedaf/lighter-mcp/blob/main/CHANGELOG.md" }
         ]
       },
       {
