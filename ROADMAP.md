@@ -25,8 +25,8 @@ ticking off the remaining items closes out the milestone.
 - [x] Smithery catalog manifest (`smithery.yaml`).
 - [x] Adapter scaffolds shipped inside the wheel via Hatchling
       `force-include`.
-- [ ] First PyPI release (`v0.1.0` → `pip install lighter-mcp` works).
-- [ ] First GHCR release (`docker pull ghcr.io/iamgoatedaf/lighter-mcp:0.1.0`).
+- [x] First PyPI release: [`pip install lighter-mcp`](https://pypi.org/project/lighter-mcp/) live.
+- [x] First GHCR release: `docker pull ghcr.io/iamgoatedaf/lighter-mcp:0.1.0`.
 - [ ] `iamgoatedaf/homebrew-tap` repo created with the synced formula.
 - [ ] Smithery catalog page approved.
 - [ ] Cursor MCP Directory + `mcp.so` listings submitted.

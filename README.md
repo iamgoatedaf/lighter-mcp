@@ -1,7 +1,8 @@
 # Lighter MCP Toolkit
 
 [![CI](https://github.com/iamgoatedaf/lighter-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/iamgoatedaf/lighter-mcp/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://pyproject.toml)
+[![PyPI](https://img.shields.io/pypi/v/lighter-mcp.svg)](https://pypi.org/project/lighter-mcp/)
+[![Python](https://img.shields.io/pypi/pyversions/lighter-mcp.svg)](https://pypi.org/project/lighter-mcp/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-1.2%2B-purple.svg)](https://modelcontextprotocol.io)
 
@@ -70,38 +71,24 @@ re-run `lighter-mcp doctor`.
 uvx lighter-mcp init
 ```
 
-</details>
-
-<details>
-<summary><b>Homebrew (macOS / Linux)</b></summary>
-
-```bash
-brew install iamgoatedaf/tap/lighter-mcp
-lighter-mcp init
-```
+`uvx` runs the published wheel from a cached venv. Good for one-off
+exploration; for steady-state use prefer `pipx install` so the agent
+config can point at a stable executable path.
 
 </details>
 
 <details>
-<summary><b>Docker</b></summary>
+<summary><b>Docker (GHCR)</b></summary>
 
 ```bash
+docker pull ghcr.io/iamgoatedaf/lighter-mcp:0.1.0
 docker run --rm -it -v ~/.lighter:/data \
-    ghcr.io/iamgoatedaf/lighter-mcp \
+    ghcr.io/iamgoatedaf/lighter-mcp:0.1.0 \
     lighter-mcp init --no-scaffolds
 ```
 
-The image ships with the kit pre-cloned and runs `lighter-mcp serve` on
-`:8791` by default.
-
-</details>
-
-<details>
-<summary><b>Smithery (auto-wires Claude Desktop / Cursor / Continue / Cline)</b></summary>
-
-```bash
-npx -y @smithery/cli install @iamgoatedaf/lighter-mcp --client claude
-```
+The image ships with the kit pre-cloned at `/opt/lighter-agent-kit` and
+runs `lighter-mcp serve` on `:8791` by default.
 
 </details>
 
@@ -116,6 +103,10 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev,http]"
 ```
 
 </details>
+
+> **Coming next** — Homebrew tap and Smithery / Cursor MCP Directory
+> listings are tracked in [ROADMAP.md](ROADMAP.md) under v0.2. Use the
+> PyPI install above in the meantime.
 
 After any path above, `lighter-mcp doctor` should print a green health envelope.
 
@@ -154,15 +145,16 @@ symlinks back into it.
 
 ## Agent adapters
 
-| Platform        | MCP tools | SKILL / system prompt | Slash commands | Sub-agent | Hook | Install |
+| Platform        | MCP tools | SKILL / system prompt | Slash commands | Sub-agent | Hook | Auto-install |
 |-----------------|:--:|:--:|:--:|:--:|:--:|---|
-| Cursor          | ✅ | rule (`.mdc`) | ✅ | ✅ | ✅ | `bash install.sh --adapter cursor` |
-| Claude Code     | ✅ | SKILL.md | ✅ | ✅ | ✅ | `bash install.sh --adapter claude` |
-| Codex           | ✅ | SKILL.md | ✅ | ✅ | ✅ | `bash install.sh --adapter codex` |
-| Claude Desktop  | ✅ | SKILL paste | ❌ | ❌ | ❌ | manual — see [`adapters/claude-desktop/`](adapters/claude-desktop/) |
+| Cursor          | ✅ | rule (`.mdc`) | ✅ | ✅ | ✅ | `lighter-mcp init --agents cursor` |
+| Claude Code     | ✅ | SKILL.md | ✅ | ✅ | ✅ | `lighter-mcp init --agents claude-code` |
+| Claude Desktop  | ✅ | SKILL paste | ❌ | ❌ | ❌ | `lighter-mcp init --agents claude-desktop` |
+| Codex           | ✅ | SKILL.md | ✅ | ✅ | ✅ | `lighter-mcp init --agents codex` |
 | OpenClaw / Telegram | ✅ | mapping doc | bot-side | ❌ | bot-side | manual — see [`adapters/openclaw/`](adapters/openclaw/) |
 | Generic MCP     | ✅ | by hand | — | — | — | see [`adapters/generic/`](adapters/generic/) |
 
+`lighter-mcp init` (no `--agents`) detects all installed agents at once.
 Per-platform READMEs explain exactly which UI surfaces exist for that
 agent and which require workarounds.
 

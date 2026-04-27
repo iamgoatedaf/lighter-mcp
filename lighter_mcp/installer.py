@@ -491,8 +491,20 @@ def install_claude_code_scaffolds(target: Path) -> None:
     _ok(f"installed Claude Code scaffolds into {claude_dir}")
 
 
-def install_codex_plugin(target: Path) -> None:
-    """Lay out a Codex plugin at ``<target>`` (defaults to ~/.codex/plugins/lighter)."""
+def install_codex_plugin(
+    target: Path,
+    *,
+    command: str | None = None,
+    lighter_config: Path | None = None,
+) -> None:
+    """Lay out a Codex plugin at ``<target>`` (defaults to ~/.codex/plugins/lighter).
+
+    ``plugin.json`` references ``./.mcp.json`` relative to itself, so we have
+    to materialize a real config inside the installed plugin directory with
+    the user's actual ``lighter-mcp`` path and lighter config path filled in.
+    Without ``command`` / ``lighter_config`` we still lay out the plugin but
+    skip the MCP block — useful for ``--no-doctor`` style smoke runs.
+    """
     adapters = _adapters_root()
     target.mkdir(parents=True, exist_ok=True)
     src = adapters / "codex" / ".codex-plugin"
@@ -501,6 +513,19 @@ def install_codex_plugin(target: Path) -> None:
     skills = adapters / "codex" / "skills"
     if skills.is_dir():
         _copytree(skills, target / "skills")
+
+    if command is not None and lighter_config is not None:
+        mcp_block = {
+            "mcpServers": {
+                "lighter": {
+                    "command": command,
+                    "args": ["stdio"],
+                    "env": {"LIGHTER_MCP_CONFIG": str(lighter_config)},
+                }
+            }
+        }
+        (target / ".mcp.json").write_text(json.dumps(mcp_block, indent=2) + "\n")
+
     _ok(f"installed Codex plugin into {target}")
 
 
@@ -575,8 +600,10 @@ def run_init(
 
     if not patched:
         _warn(
-            "no agents were patched. You can wire one manually using the "
-            "snippet printed by `lighter-mcp init --print-snippet`."
+            "no agents were auto-patched. Add this snippet to your client's "
+            "MCP config manually:\n"
+            f'    {{"command": "{server_command}", "args": ["stdio"], '
+            f'"env": {{"LIGHTER_MCP_CONFIG": "{config_path}"}}}}'
         )
 
     return InitResult(
@@ -669,7 +696,11 @@ def _wire_agent(
 
     if agent.name == "codex":
         if not skip_scaffolds:
-            install_codex_plugin(agent.config_path)
+            install_codex_plugin(
+                agent.config_path,
+                command=server_command,
+                lighter_config=lighter_config,
+            )
         return
 
     raise InstallError(f"unknown agent: {agent.name}")

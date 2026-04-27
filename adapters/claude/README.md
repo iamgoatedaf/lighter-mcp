@@ -14,6 +14,16 @@ For Claude Desktop the only artifacts you can install are the MCP server
 itself and the `skill/SKILL.md` (delivered via the system prompt). Slash
 commands and sub-agents do not exist on that surface.
 
+> **You probably don't need this guide.** `lighter-mcp init` auto-detects
+> Claude Code (`~/.claude/`) and Claude Desktop and wires both with one
+> command:
+>
+> ```bash
+> lighter-mcp init --agents claude-code,claude-desktop
+> ```
+>
+> Read on only for manual setup or to debug the auto-installer.
+
 ## 1. Install the MCP server
 
 Same as for Cursor. See `../cursor/README.md` step 1, or just run the

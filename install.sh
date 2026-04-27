@@ -4,9 +4,10 @@
 # Modern users should run one of these instead — they're all faster and don't
 # require a git checkout:
 #
-#     pipx install lighter-mcp && lighter-mcp init
-#     uvx lighter-mcp init
-#     brew install iamgoatedaf/tap/lighter-mcp && lighter-mcp init
+#     pipx install lighter-mcp && lighter-mcp init       # recommended
+#     uvx lighter-mcp init                               # ephemeral, no install
+#
+# (Homebrew and Smithery installs are tracked in ROADMAP.md under v0.2.)
 #
 # This script is kept for two reasons:
 #

@@ -7,7 +7,7 @@ Read this end-to-end before opening a PR.
 ## Quick dev setup
 
 ```bash
-git clone https://github.com/<owner>/lighter-mcp
+git clone https://github.com/iamgoatedaf/lighter-mcp
 cd lighter-mcp
 python3.11 -m venv .venv
 .venv/bin/pip install -e ".[dev,http]"
@@ -83,9 +83,26 @@ Versions follow SemVer. Patch (`0.1.x`) for bug fixes, minor (`0.x.0`)
 for new tools or relaxed schemas, major (`x.0.0`) for any change that
 removes a tool, narrows a schema, or alters confirmation semantics.
 
-The maintainer drafts release notes in `CHANGELOG.md`, tags the commit,
-and pushes. Wheels are not published to PyPI (yet) — install is via
-`pip install -e .` against a tag.
+Cutting a release:
+
+1. Update `lighter_mcp/__init__.py::__version__` and the `pyproject.toml`
+   `version` to the new value (keep them in sync).
+2. Add a `[X.Y.Z] — YYYY-MM-DD` section to `CHANGELOG.md` summarising the
+   public-facing changes.
+3. Tag the commit on `main` and push the tag:
+
+   ```bash
+   git tag vX.Y.Z && git push origin vX.Y.Z
+   ```
+
+   The `release.yml` workflow then builds the sdist + wheel, publishes to
+   [PyPI](https://pypi.org/project/lighter-mcp/) via Trusted Publishing,
+   pushes a Docker image to `ghcr.io/iamgoatedaf/lighter-mcp:X.Y.Z`, and
+   drafts a GitHub Release with the same artifacts attached.
+
+The PyPI publish step requires a maintainer to approve the deployment in
+the `pypi` GitHub environment — this is intentional belt-and-suspenders
+beyond the OIDC handshake.
 
 ## Reporting bugs and vulnerabilities
 

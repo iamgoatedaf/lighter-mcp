@@ -13,6 +13,11 @@ trading workflow:
 - The `.mdc` rule that teaches Cursor's main agent the two-step
   confirmation flow.
 
+> **You probably don't need this guide.** `lighter-mcp init` (or
+> `lighter-mcp init --agents cursor`) does every step below automatically.
+> Read on only if you want to wire Cursor by hand or are debugging the
+> auto-installer.
+
 ## 1. Install the MCP server
 
 ```bash

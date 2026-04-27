@@ -288,3 +288,31 @@ def test_run_init_skips_unknown_agents(tmp_path, monkeypatch):
             auto_install_kit=False,
             skip_scaffolds=True,
         )
+
+
+def test_install_codex_plugin_writes_mcp_json(tmp_path):
+    """Regression: ``plugin.json`` references ``./.mcp.json`` next to itself,
+    so the installer must materialize that file with real paths."""
+    target = tmp_path / "codex-plugin"
+    cfg = tmp_path / "config.toml"
+    installer.install_codex_plugin(
+        target,
+        command="/usr/local/bin/lighter-mcp",
+        lighter_config=cfg,
+    )
+    mcp_json = target / ".mcp.json"
+    assert mcp_json.is_file(), "codex plugin must contain a .mcp.json"
+    data = json.loads(mcp_json.read_text())
+    assert data["mcpServers"]["lighter"]["command"] == "/usr/local/bin/lighter-mcp"
+    assert data["mcpServers"]["lighter"]["args"] == ["stdio"]
+    assert (
+        data["mcpServers"]["lighter"]["env"]["LIGHTER_MCP_CONFIG"] == str(cfg)
+    )
+
+
+def test_install_codex_plugin_skips_mcp_json_without_paths(tmp_path):
+    """Without command/lighter_config we still lay out the plugin but skip the
+    MCP block. Useful for hermetic smoke tests like the homebrew formula."""
+    target = tmp_path / "codex-plugin"
+    installer.install_codex_plugin(target)
+    assert not (target / ".mcp.json").exists()

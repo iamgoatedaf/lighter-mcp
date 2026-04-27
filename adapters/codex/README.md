@@ -5,6 +5,17 @@ manifest in `.codex-plugin/plugin.json` already wires up the MCP server,
 the SKILL, slash commands, the `lighter-trader` sub-agent, and the
 after-trade hook.
 
+> **You probably don't need this guide.** `lighter-mcp init` auto-detects
+> `~/.codex/` and lays out the plugin (with a generated `.mcp.json`
+> pointing at your installed `lighter-mcp` binary) under
+> `~/.codex/plugins/lighter`:
+>
+> ```bash
+> lighter-mcp init --agents codex
+> ```
+>
+> Read on only for manual setup or to debug the auto-installer.
+
 ## 1. Register the MCP server
 
 Codex Desktop reads `~/.codex/config.toml`. Add a `[mcp_servers.lighter]`

@@ -6,6 +6,42 @@ versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `lighter-mcp init` one-shot installer: clones `lighter-agent-kit`
+  (git or HTTPS tarball fallback), writes a default readonly config,
+  patches the MCP config of every detected agent (Cursor, Claude Code,
+  Claude Desktop, Codex), and copies slash-commands / `lighter-trader`
+  sub-agent / post-trade hook scaffolds into each.
+- PyPI release: `pip install lighter-mcp` and `pipx install lighter-mcp`
+  now work end-to-end. The wheel ships adapter scaffolds and config
+  templates as package data so `init` works without the source repo.
+- Multi-arch Docker image at `ghcr.io/iamgoatedaf/lighter-mcp` (amd64 +
+  arm64), with `lighter-agent-kit` pre-cloned at `/opt/lighter-agent-kit`.
+- `release.yml` workflow that builds sdist + wheel, publishes to PyPI
+  via Trusted Publishing, pushes the Docker image to GHCR, and drafts a
+  GitHub Release on each `vX.Y.Z` tag.
+- Homebrew formula skeleton at `packaging/homebrew/lighter-mcp.rb` and
+  Smithery manifest at `smithery.yaml` (catalog submissions tracked in
+  `ROADMAP.md`).
+- 16 unit tests for the `installer` module covering agent detection,
+  MCP-JSON patching (including alternate `mcp.servers` shape and
+  quarantining invalid input), default-config writing, and the
+  git/tarball kit auto-install paths.
+
+### Fixed
+
+- Codex plugin: `plugin.json` references `./.mcp.json`, but no such file
+  was ever placed inside `.codex-plugin/`. `install_codex_plugin` now
+  generates a `.mcp.json` with the user's actual `lighter-mcp` path and
+  config path inside the installed plugin directory.
+
+### Changed
+
+- `install.sh` is now a 30-line shim that delegates to `lighter-mcp init`,
+  preserving backwards compatibility for anyone whose docs or muscle
+  memory still reaches for `bash install.sh`.
+
 ## [0.1.0] — 2026-04-26
 
 Initial public release.
