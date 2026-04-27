@@ -82,7 +82,8 @@
               "guides/first-paper-trade",
               "guides/guarded-live-order",
               "guides/funding-scan",
-              "guides/price-alerts"
+              "guides/price-alerts",
+              "guides/live-pnl-watcher"
             ]
           },
           {

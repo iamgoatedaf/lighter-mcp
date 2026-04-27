@@ -1,0 +1,190 @@
+---
+title: "Live PnL watcher"
+description: "Two-pane terminal workflow: a WebSocket-driven PnL view that hot-reloads on paper-state changes, plus a trade.sh CLI wrapper for long/short while the watcher is running."
+---
+
+The MCP tools are designed for an agent at the controls. But while
+you're testing strategies as a human, you usually want **sub-second
+visual feedback** in one window and a **terse CLI** in another. This
+guide ships both as drop-in shell scripts in
+[`examples/live-pnl-watcher/`](https://github.com/iamgoatedaf/lighter-mcp/tree/main/examples/live-pnl-watcher).
+
+## What you get
+
+<CardGroup cols={2}>
+  <Card title="watch.sh" icon="chart-line">
+    Connects to Lighter's mainnet WebSocket, subscribes to order books
+    for every market you currently hold a paper position in, and
+    re-renders unrealized PnL on every push (~50–200 ms latency). Hot
+    reloads `paper-state.json` on `mtime` change.
+  </Card>
+  <Card title="trade.sh" icon="terminal">
+    Thin wrapper around the kit's `paper.py`. `./trade.sh long SOL 50`,
+    `./trade.sh short BTC 0.001`, `./trade.sh status`, plus a `raw`
+    pass-through for any subcommand the kit supports.
+  </Card>
+</CardGroup>
+
+## Prerequisites
+
+<Steps>
+  <Step title="Install the MCP">
+    ```bash
+    pipx install lighter-mcp && lighter-mcp init
+    ```
+    This sets up the kit at `~/.lighter/lighter-agent-kit` and writes
+    `kit_path` into `~/.lighter/lighter-mcp/config.toml` so the scripts
+    here can find it without further setup.
+  </Step>
+  <Step title="Initialize a paper account">
+    Either through the MCP:
+    ```jsonc
+    {
+      "name": "lighter_paper_init",
+      "arguments": { "collateral": 100000, "tier": "premium_7" }
+    }
+    ```
+    or directly:
+    ```bash
+    cd ~/.lighter/lighter-agent-kit
+    .venv/bin/python scripts/paper.py init --collateral 100000 --tier premium_7
+    ```
+  </Step>
+  <Step title="VPN if needed">
+    Lighter's `/stream` endpoint is geo-restricted at the CloudFront
+    edge. From a restricted region the WS handshake returns HTTP 400
+    with `code: 20558`. Connect via a VPN exiting in an allowed
+    jurisdiction.
+  </Step>
+</Steps>
+
+## Quick start (macOS)
+
+```bash
+git clone https://github.com/iamgoatedaf/lighter-mcp
+cd lighter-mcp/examples/live-pnl-watcher
+chmod +x watch.sh trade.sh start.sh
+./start.sh
+```
+
+`start.sh` opens two `Terminal.app` windows: one runs the watcher, the
+other is a prompt ready for `trade.sh` commands.
+
+## Quick start (any OS)
+
+Open two terminals manually.
+
+**Window 1**:
+
+```bash
+cd lighter-mcp/examples/live-pnl-watcher
+./watch.sh
+```
+
+**Window 2**:
+
+```bash
+cd lighter-mcp/examples/live-pnl-watcher
+./trade.sh status
+./trade.sh long SOL 50
+./trade.sh short BTC 0.001
+```
+
+## What the watcher looks like
+
+```text
+=== Lighter Paper PnL — 22:14:03.812  (tick #218, Δ  73ms) ===
+
+   SOL  long   size=    50.0000  entry=$    87.0001  mark=$   87.1934  sp= 1.2bps  uPnL=$    +9.66
+   BTC  long   size=     0.0010  entry=$ 78605.0000  mark=$79172.1500  sp= 0.4bps  uPnL=$    +0.57
+
+  Total uPnL:   $+10.23
+  Collateral:   $9,913.34
+  Equity:       $9,923.57
+
+Ctrl+C to exit  •  paper-state auto-reloads on change
+```
+
+Every line redraws on each WS push. The `Δ` is the wall time between
+ticks — typical mainnet flow gives you a fresh tick every few hundred
+milliseconds while the book is moving.
+
+## `trade.sh` reference
+
+| Command                                            | What it does |
+|----------------------------------------------------|---|
+| `./trade.sh long SYMBOL AMOUNT`                    | Market buy. Alias of `buy`. |
+| `./trade.sh short SYMBOL AMOUNT`                   | Market sell. Alias of `sell`. |
+| `./trade.sh status`                                | Account overview. |
+| `./trade.sh positions`                             | Open positions with entry / mark / PnL. |
+| `./trade.sh trades`                                | Trade history. |
+| `./trade.sh health`                                | Paper-engine sanity check. |
+| `./trade.sh raw <paper.py args ...>`               | Pass-through to the kit. |
+
+Pass-through examples:
+
+```bash
+./trade.sh raw order limit SOL --side buy --amount 50 --price 80
+./trade.sh raw reset --collateral 1000000 --tier premium_7
+./trade.sh raw close SOL
+```
+
+## How resolution works
+
+Both scripts find the kit checkout in this order:
+
+1. `$LIGHTER_KIT_PATH` env var.
+2. `kit_path = "..."` in `~/.lighter/lighter-mcp/config.toml`.
+3. Hard fail with a help message.
+
+So if you installed via `lighter-mcp init`, no setup is needed. To
+override:
+
+```bash
+LIGHTER_KIT_PATH=/opt/lighter-agent-kit ./watch.sh
+```
+
+## Why not just use the MCP tools for this?
+
+You can — `lighter_account_get_positions` returns the same data the
+watcher renders, just on demand. The watcher exists because:
+
+- It's **push-driven**, not poll-driven, so there's no rate-limit
+  concern and latency is bounded by the exchange itself.
+- It's **read-only by construction**: the watcher only opens a
+  subscriber WebSocket, so you can leave it running indefinitely with
+  no fund-loss surface.
+- It **shares state with the MCP**: place an order through your agent
+  in another window, the watcher picks up the new position on the next
+  `mtime` change of `paper-state.json` without a restart.
+
+<Tip>
+  The same architecture works for live-mode positions if you swap the
+  state-file source — but live PnL through the MCP is best done via
+  `lighter_account_get_positions` so you get the exchange's authoritative
+  mark and funding accruals rather than a synthetic mid.
+</Tip>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Could not locate a lighter-agent-kit checkout">
+    Either set `LIGHTER_KIT_PATH=/path/to/lighter-agent-kit` or run
+    `lighter-mcp init` to create the standard checkout.
+  </Accordion>
+  <Accordion title="paper-state not found">
+    Run `./trade.sh raw init` (or any `paper.py` `init`) first to
+    create the state file.
+  </Accordion>
+  <Accordion title="WS hangs at Connecting…">
+    Geo-block. Switch on your VPN.
+  </Accordion>
+  <Accordion title="HTTP 400 with code 20558 on connect">
+    Same — geo-block. The error message is explicit:
+    *"You are accessing Lighter from a restricted jurisdiction."*
+  </Accordion>
+  <Accordion title="mark = — for several seconds after start">
+    Normal — the watcher waits for the first book snapshot to arrive on
+    each subscribed market.
+  </Accordion>
+</AccordionGroup>

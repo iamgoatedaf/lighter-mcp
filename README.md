@@ -164,6 +164,10 @@ End-to-end walkthroughs in [`examples/`](examples/):
   two-step confirm flow on `lighter_live_market_order`.
 - [`funding-scan.md`](examples/funding-scan.md) — read-only scan of
   funding rates across symbols.
+- [`live-pnl-watcher/`](examples/live-pnl-watcher/) — two-pane
+  terminal workflow: a WebSocket-driven PnL view that hot-reloads on
+  `paper-state.json` changes, plus a `trade.sh` CLI wrapper for
+  long/short/status while the watcher is running.
 
 **Hosted documentation site** — [`website/`](website/) is a Mintlify
 project. Push to GitHub and Mintlify auto-deploys the site at
