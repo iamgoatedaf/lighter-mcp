@@ -31,10 +31,10 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
-import websockets.sync.client as _ws_sync
+import lighter
 import lighter.ws_client as _lighter_ws
+import websockets.sync.client as _ws_sync
 
 _LIGHTER_UA = "OpenAPI-Generator/1.0.0/python"
 _orig_connect = _ws_sync.connect
@@ -45,9 +45,10 @@ def _connect_with_ua(uri, *args, **kwargs):
     return _orig_connect(uri, *args, **kwargs)
 
 
+# Lighter's /stream WS endpoint is gated on the SDK's User-Agent. The kit's
+# lighter.ws_client module looks up `connect` lazily, so patching it after
+# import (but before WsClient.run()) is enough to inject the UA header.
 _lighter_ws.connect = _connect_with_ua
-
-import lighter  # noqa: E402
 
 DEFAULT_STATE = Path.home() / ".lighter" / "lighter-agent-kit" / "paper-state.json"
 DEFAULT_HOST = "mainnet.zklighter.elliot.ai"  # SDK prepends wss:// itself
@@ -73,7 +74,7 @@ def parse_positions(state: dict) -> tuple[list[dict], float]:
     return positions, collateral
 
 
-def mid_from_book(book: object) -> Optional[tuple[float, float]]:
+def mid_from_book(book: object) -> tuple[float, float] | None:
     """Return ``(mid, spread_bps)`` from an order-book payload, or None."""
     if not isinstance(book, dict):
         return None
