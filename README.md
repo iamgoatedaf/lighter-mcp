@@ -104,10 +104,6 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev,http]"
 
 </details>
 
-> **Coming next** — Homebrew tap and Smithery / Cursor MCP Directory
-> listings are tracked in [ROADMAP.md](ROADMAP.md) under v0.2. Use the
-> PyPI install above in the meantime.
-
 After any path above, `lighter-mcp doctor` should print a green health envelope.
 
 ## Modes and tools

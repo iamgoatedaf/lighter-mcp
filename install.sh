@@ -7,8 +7,6 @@
 #     pipx install lighter-mcp && lighter-mcp init       # recommended
 #     uvx lighter-mcp init                               # ephemeral, no install
 #
-# (Homebrew and Smithery installs are tracked in ROADMAP.md under v0.2.)
-#
 # This script is kept for two reasons:
 #
 #   1. Backwards compatibility with anyone whose docs / muscle memory still

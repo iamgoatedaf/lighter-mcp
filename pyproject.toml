@@ -98,7 +98,6 @@ include = [
     "install.sh",
     "Dockerfile",
     "smithery.yaml",
-    "ROADMAP.md",
 ]
 
 [tool.ruff]

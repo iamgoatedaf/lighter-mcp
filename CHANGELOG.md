@@ -22,8 +22,7 @@ versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
   via Trusted Publishing, pushes the Docker image to GHCR, and drafts a
   GitHub Release on each `vX.Y.Z` tag.
 - Homebrew formula skeleton at `packaging/homebrew/lighter-mcp.rb` and
-  Smithery manifest at `smithery.yaml` (catalog submissions tracked in
-  `ROADMAP.md`).
+  Smithery manifest at `smithery.yaml` (catalog submissions pending).
 - 16 unit tests for the `installer` module covering agent detection,
   MCP-JSON patching (including alternate `mcp.servers` shape and
   quarantining invalid input), default-config writing, and the
