@@ -10,10 +10,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from .schemas import (
+    PaperInitInput,
     PaperLiquidationInput,
     PaperOrderIocInput,
     PaperOrderMarketInput,
     PaperPositionsInput,
+    PaperResetInput,
     PaperSetTierInput,
     PaperTradesInput,
     SymbolInput,
@@ -28,20 +30,37 @@ if TYPE_CHECKING:  # pragma: no cover
 def register_paper_tools(app: FastMCP, ctx: ServerContext) -> None:
     @app.tool(
         name="lighter_paper_init",
-        description="Create a new paper trading account. Required before the first paper order.",
+        description=(
+            "Create a new paper trading account. Required before the first paper "
+            "order. Pass `collateral` (USDC) and `tier` to override kit defaults "
+            "(10000 / premium)."
+        ),
     )
-    async def lighter_paper_init() -> Any:
+    async def lighter_paper_init(input: PaperInitInput) -> Any:
+        args: list[str] = ["init"]
+        if input.collateral is not None:
+            args += ["--collateral", str(input.collateral)]
+        if input.tier is not None:
+            args += ["--tier", input.tier]
         return await ctx.run_kit(
-            tool="lighter_paper_init", script="paper.py", args=["init"]
+            tool="lighter_paper_init", script="paper.py", args=args
         )
 
     @app.tool(
         name="lighter_paper_reset",
-        description="Wipe paper state and start fresh. Confirms by overwriting state.",
+        description=(
+            "Wipe paper state and start fresh. Pass `collateral` and/or `tier` to "
+            "set them on the new account; otherwise the kit defaults apply."
+        ),
     )
-    async def lighter_paper_reset() -> Any:
+    async def lighter_paper_reset(input: PaperResetInput) -> Any:
+        args: list[str] = ["reset"]
+        if input.collateral is not None:
+            args += ["--collateral", str(input.collateral)]
+        if input.tier is not None:
+            args += ["--tier", input.tier]
         return await ctx.run_kit(
-            tool="lighter_paper_reset", script="paper.py", args=["reset"]
+            tool="lighter_paper_reset", script="paper.py", args=args
         )
 
     @app.tool(

@@ -164,10 +164,47 @@ class PaperLiquidationInput(_SymbolMixin):
     no_refresh: bool = Field(default=False)
 
 
+PaperTier = Literal[
+    "standard",
+    "premium",
+    "premium_1",
+    "premium_2",
+    "premium_3",
+    "premium_4",
+    "premium_5",
+    "premium_6",
+    "premium_7",
+]
+
+
 class PaperSetTierInput(BaseModel):
-    tier: str = Field(
+    tier: PaperTier = Field(
         ...,
         description="Fee tier: standard, premium, premium_1 .. premium_7",
+    )
+
+
+class PaperInitInput(BaseModel):
+    collateral: float | None = Field(
+        default=None,
+        gt=0,
+        description="Starting USDC collateral. Defaults to the kit's value (10000) if unset.",
+    )
+    tier: PaperTier | None = Field(
+        default=None,
+        description="Fee tier. Defaults to the kit's value (premium) if unset.",
+    )
+
+
+class PaperResetInput(BaseModel):
+    collateral: float | None = Field(
+        default=None,
+        gt=0,
+        description="New starting USDC collateral. Defaults to the kit's value if unset.",
+    )
+    tier: PaperTier | None = Field(
+        default=None,
+        description="Fee tier. Defaults to the kit's value if unset.",
     )
 
     @field_validator("tier")
