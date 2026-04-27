@@ -27,7 +27,7 @@ write tools unless `enabled = true`.
 | Key                       | Type        | Default | Effect                                                                                                  |
 | ------------------------- | ----------- | ------- | ------------------------------------------------------------------------------------------------------- |
 | `enabled`                 | bool        | `false` | Master switch for live writes.                                                                          |
-| `allowed_symbols`         | list[str]   | `[]`    | If non-empty, only listed bases (e.g. `["BTC"]`) may be traded. Empty list = no allowlist (not advised). |
+| `allowed_symbols`         | list[str]   | `[]`    | If non-empty, only listed bases (e.g. `["BTC"]`) may be traded. Empty list = no allowlist; all listed markets allowed. |
 | `max_order_notional_usd`  | float       | `0`     | `0` disables the per-order cap.                                                                         |
 | `max_daily_notional_usd`  | float       | `0`     | `0` disables the rolling cap. Counter resets at UTC midnight.                                           |
 | `max_leverage`            | int         | `0`     | `0` disables the leverage cap.                                                                          |

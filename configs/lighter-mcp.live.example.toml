@@ -1,18 +1,39 @@
-# Live trading example. Copy, review, set narrow limits, then enable.
-# WARNING: live orders on Lighter are irreversible. Test on testnet first.
+# Live trading example.
+#
+# Philosophy: out of the box there are no notional/leverage caps —
+# you opt into them by uncommenting the fields below. The only thing
+# that's on by default is `require_confirmation`, which forces a
+# two-step confirm on every live order/cancel/leverage change. That
+# alone prevents single-keystroke or hallucinated trades.
+#
+# WARNING: live orders on Lighter are irreversible. Test on testnet
+# first (set `host` below) and start with small sizes.
 
 mode = "live"
 kit_path = "/path/to/lighter-agent-kit"  # set by install.sh, or edit by hand
 audit_log = "~/.lighter/lighter-mcp/audit.jsonl"
 host = "https://mainnet.zklighter.elliot.ai"
+# host = "https://testnet.zklighter.elliot.ai"
 confirmation_ttl_s = 120
 
 [live]
 enabled = true
-allowed_symbols = ["BTC", "ETH"]
-max_order_notional_usd = 50
-max_daily_notional_usd = 200
-max_leverage = 3
+
+# Empty list = all listed markets are tradable.
+# Restrict by uncommenting:
+# allowed_symbols = ["BTC", "ETH", "SOL"]
+allowed_symbols = []
+
+# Per-order USD notional cap. 0/unset = no cap.
+# max_order_notional_usd = 1000
+
+# Rolling 24h USD notional cap (resets at UTC midnight). 0/unset = no cap.
+# max_daily_notional_usd = 5000
+
+# Maximum leverage (integer). 0/unset = no cap.
+# max_leverage = 10
+
+# Two-step confirmation for live writes. Strongly recommended.
 require_confirmation = true
 
 [funds]

@@ -26,15 +26,77 @@ do not exist in the catalog until you opt in.
 
 ## Catalog by mode
 
-| Tool family            | readonly | paper | live | funds |
-| ---------------------- | :------: | :---: | :--: | :---: |
-| `lighter_market_*`     | ✅       | ✅    | ✅   | ✅    |
-| `lighter_account_*`    | ✅       | ✅    | ✅   | ✅    |
-| `lighter_orders_*`     | ✅       | ✅    | ✅   | ✅    |
-| `lighter_paper_*`      | —        | ✅    | ✅   | ✅    |
-| `lighter_live_*`       | —        | —     | ✅   | ✅    |
-| `lighter_funds_*`      | —        | —     | —    | ✅    |
-| `lighter_health` etc.  | ✅       | ✅    | ✅   | ✅    |
+All 39 tools, with the exact mode each one is exposed in. ✓ = present
+in the catalog; — = not registered, the agent literally cannot see or
+call it.
+
+### Diagnostics — 3 tools (always on)
+
+| Tool                       | readonly | paper | live | funds |
+| -------------------------- | :------: | :---: | :--: | :---: |
+| `lighter_health`           |    ✓     |   ✓   |  ✓   |   ✓   |
+| `lighter_version`          |    ✓     |   ✓   |  ✓   |   ✓   |
+| `lighter_safety_status`    |    ✓     |   ✓   |  ✓   |   ✓   |
+
+### Read-only — 15 tools
+
+| Tool                            | readonly | paper | live | funds |
+| ------------------------------- | :------: | :---: | :--: | :---: |
+| `lighter_system_status`         |    ✓     |   ✓   |  ✓   |   ✓   |
+| `lighter_list_markets`          |    ✓     |   ✓   |  ✓   |   ✓   |
+| `lighter_market_stats`          |    ✓     |   ✓   |  ✓   |   ✓   |
+| `lighter_market_info`           |    ✓     |   ✓   |  ✓   |   ✓   |
+| `lighter_market_book`           |    ✓     |   ✓   |  ✓   |   ✓   |
+| `lighter_market_trades`         |    ✓     |   ✓   |  ✓   |   ✓   |
+| `lighter_market_candles`        |    ✓     |   ✓   |  ✓   |   ✓   |
+| `lighter_market_funding`        |    ✓     |   ✓   |  ✓   |   ✓   |
+| `lighter_auth_status`           |    ✓     |   ✓   |  ✓   |   ✓   |
+| `lighter_account_info`          |    ✓     |   ✓   |  ✓   |   ✓   |
+| `lighter_account_apikeys`       |    ✓     |   ✓   |  ✓   |   ✓   |
+| `lighter_account_limits`        |    ✓     |   ✓   |  ✓   |   ✓   |
+| `lighter_portfolio_performance` |    ✓     |   ✓   |  ✓   |   ✓   |
+| `lighter_orders_open`           |    ✓     |   ✓   |  ✓   |   ✓   |
+| `lighter_orders_history`        |    ✓     |   ✓   |  ✓   |   ✓   |
+
+### Paper — 11 tools
+
+| Tool                                | readonly | paper | live | funds |
+| ----------------------------------- | :------: | :---: | :--: | :---: |
+| `lighter_paper_init`                |    —     |   ✓   |  ✓   |   ✓   |
+| `lighter_paper_reset`               |    —     |   ✓   |  ✓   |   ✓   |
+| `lighter_paper_set_tier`            |    —     |   ✓   |  ✓   |   ✓   |
+| `lighter_paper_status`              |    —     |   ✓   |  ✓   |   ✓   |
+| `lighter_paper_positions`           |    —     |   ✓   |  ✓   |   ✓   |
+| `lighter_paper_trades`              |    —     |   ✓   |  ✓   |   ✓   |
+| `lighter_paper_health`              |    —     |   ✓   |  ✓   |   ✓   |
+| `lighter_paper_liquidation_price`   |    —     |   ✓   |  ✓   |   ✓   |
+| `lighter_paper_refresh`             |    —     |   ✓   |  ✓   |   ✓   |
+| `lighter_paper_market_order`        |    —     |   ✓   |  ✓   |   ✓   |
+| `lighter_paper_ioc_order`           |    —     |   ✓   |  ✓   |   ✓   |
+
+### Live — 8 tools
+
+Two-step confirmation required; gated by allowlist + per-day notional cap.
+
+| Tool                            | readonly | paper | live | funds |
+| ------------------------------- | :------: | :---: | :--: | :---: |
+| `lighter_live_limit_order`      |    —     |   —   |  ✓   |   ✓   |
+| `lighter_live_market_order`     |    —     |   —   |  ✓   |   ✓   |
+| `lighter_live_modify_order`     |    —     |   —   |  ✓   |   ✓   |
+| `lighter_live_cancel_order`     |    —     |   —   |  ✓   |   ✓   |
+| `lighter_live_cancel_all`       |    —     |   —   |  ✓   |   ✓   |
+| `lighter_live_close_all`        |    —     |   —   |  ✓   |   ✓   |
+| `lighter_live_set_leverage`     |    —     |   —   |  ✓   |   ✓   |
+| `lighter_live_adjust_margin`    |    —     |   —   |  ✓   |   ✓   |
+
+### Funds — 2 tools
+
+Always two-step confirmed; per-call notional cap independent of live cap.
+
+| Tool                          | readonly | paper | live | funds |
+| ----------------------------- | :------: | :---: | :--: | :---: |
+| `lighter_funds_transfer`      |    —     |   —   |  —   |   ✓   |
+| `lighter_funds_withdraw`      |    —     |   —   |  —   |   ✓   |
 
 ## What each gate enforces
 

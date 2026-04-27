@@ -1,7 +1,7 @@
 # Lighter MCP — example configuration.
 #
-# Default mode is "readonly" so this file is safe to ship. Live trading and
-# fund movements require explicit opt-in below.
+# Default mode is "readonly" so this file is safe to ship. Live
+# trading and fund movements require explicit opt-in below.
 #
 # Save to one of:
 #   $LIGHTER_MCP_CONFIG
@@ -27,13 +27,21 @@ confirmation_ttl_s = 120
 host = "https://mainnet.zklighter.elliot.ai"
 # host = "https://testnet.zklighter.elliot.ai"
 
+# Live trading section — only takes effect when mode = "live" or "funds".
+#
+# Out of the box there are no notional/leverage caps. The only safety
+# rail that's on by default is `require_confirmation`, which forces a
+# two-step confirm on every live order. Opt into hard caps below.
 [live]
-enabled = false
-allowed_symbols = ["BTC", "ETH", "SOL"]
-max_order_notional_usd = 100
-max_daily_notional_usd = 500
-max_leverage = 3
-require_confirmation = true
+enabled = false                  # master switch; set to true + mode="live" to actually trade
+allowed_symbols = []             # empty list = all listed markets allowed
+
+# Uncomment any of these to opt into hard caps. 0 or unset = no cap.
+# max_order_notional_usd = 1000
+# max_daily_notional_usd = 5000
+# max_leverage = 10
+
+require_confirmation = true      # strongly recommended; keep on
 
 [funds]
 transfers_enabled = false
