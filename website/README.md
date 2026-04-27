@@ -24,8 +24,8 @@ The CLI watches the folder and live-reloads on every save.
 website/
 ├── docs.json                  # site config (theme, navigation, branding)
 ├── index.mdx                  # landing page (hero + cards)
-├── logo/                      # light / dark logos rendered in the header
-├── favicon.svg
+├── logo/                      # logo rendered in the header
+├── favicon.png
 ├── get-started/               # onboarding pages
 ├── tools/                     # MCP tool reference (one page per family)
 ├── reference/                 # internals: safety, confirmations, audit, CLI
@@ -58,6 +58,4 @@ website/
 ## Source of truth
 
 When tool behavior, schemas, or safety semantics change in the Python
-code, update the corresponding Mintlify page in the same PR. The CI
-job in `.github/workflows/docs.yml` enforces that any change under
-`lighter_mcp/tools_*.py` also touches `website/tools/*.mdx`.
+code, update the corresponding Mintlify page in the same PR.

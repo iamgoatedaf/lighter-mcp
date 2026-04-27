@@ -150,7 +150,7 @@
     "metatags": {
       "og:type": "website",
       "og:site_name": "Lighter MCP",
-      "og:image": "/logo/dark.svg",
+      "og:image": "/logo/lighter.png",
       "twitter:card": "summary_large_image"
     }
   },
