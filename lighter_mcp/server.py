@@ -202,6 +202,17 @@ def _build_argparser() -> argparse.ArgumentParser:
         help="Run a non-interactive smoke check (config load + kit health) and exit.",
     )
 
+    init = sub.add_parser(
+        "init",
+        help=(
+            "First-time setup: auto-install the kit, write a default config, "
+            "and wire any detected MCP-capable agents (Cursor / Claude / Codex)."
+        ),
+    )
+    from .installer import add_init_args  # local import: keeps import light for stdio runs
+
+    add_init_args(init)
+
     watch = sub.add_parser(
         "watch",
         help=(
@@ -234,6 +245,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "version":
         print(__version__)
         return 0
+
+    if args.command == "init":
+        # ``init`` is the bootstrap command — it must run *before* a valid
+        # config exists, so we deliberately don't load_config() here.
+        from .installer import run_init_cli
+
+        return run_init_cli(args)
 
     try:
         config = load_config(args.config)

@@ -44,10 +44,28 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Smoke install (no doctor, fake kit path)
+      - name: Build wheel
         run: |
-          mkdir -p /tmp/fake-kit
-          bash install.sh --kit-path /tmp/fake-kit --no-doctor
-      - name: lighter-mcp --help
+          python -m pip install --upgrade build
+          python -m build --wheel --outdir dist
+      - name: Install wheel via pipx
         run: |
-          ~/.lighter/lighter-mcp/venv/bin/lighter-mcp --help
+          python -m pip install --upgrade pipx
+          pipx install dist/lighter_mcp-*.whl
+      - name: lighter-mcp init (no kit, fake path) — exercises installer
+        run: |
+          mkdir -p /tmp/fake-kit/scripts
+          printf '%s\n' '#!/usr/bin/env python3' 'print("{}")' > /tmp/fake-kit/scripts/query.py
+          chmod +x /tmp/fake-kit/scripts/query.py
+          lighter-mcp init \
+              --kit-path /tmp/fake-kit \
+              --no-install-kit \
+              --no-doctor \
+              --no-scaffolds \
+              --agents cursor
+      - name: lighter-mcp --help / version
+        run: |
+          lighter-mcp --help
+          lighter-mcp version
+      - name: Legacy bash install.sh path still works
+        run: bash install.sh --kit-path /tmp/fake-kit --no-doctor --no-scaffolds

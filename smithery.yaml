@@ -1,0 +1,52 @@
+# smithery.yaml — manifest for https://smithery.ai
+#
+# Smithery is the de-facto MCP catalog. With this manifest the server is
+# installable into any supported client (Claude Desktop, Cursor, Continue,
+# Cline, etc.) via:
+#
+#     npx -y @smithery/cli install @iamgoatedaf/lighter-mcp --client claude
+#
+# The catalog page also gives users a one-click playground that talks to
+# the server in stdio mode using the public read tools.
+#
+# Schema reference: https://smithery.ai/docs/build/project-config
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    additionalProperties: false
+    properties:
+      mode:
+        type: string
+        enum: ["readonly", "paper", "live", "funds"]
+        default: "readonly"
+        description: |
+          Safety tier. Higher tiers expose more tools; ``readonly`` exposes
+          only public + authenticated reads. ``live`` and ``funds`` move real
+          money and require additional config that this catalog flow does
+          not set — flip them on locally only.
+      kitPath:
+        type: string
+        description: |
+          Optional override for the lighter-agent-kit checkout. Defaults to
+          ~/.lighter/lighter-agent-kit, populated automatically by
+          ``lighter-mcp init`` on first run.
+    required: []
+
+  commandFunction: |
+    (config) => ({
+      command: "lighter-mcp",
+      args: ["stdio"],
+      env: {
+        LIGHTER_MCP_CONFIG: process.env.LIGHTER_MCP_CONFIG
+          || `${process.env.HOME}/.lighter/lighter-mcp/config.toml`,
+        ...(config && config.mode  ? { LIGHTER_MCP_MODE: config.mode } : {}),
+        ...(config && config.kitPath ? { LIGHTER_KIT_PATH: config.kitPath } : {}),
+      },
+    })
+
+build:
+  # Smithery clones this repo and installs the wheel from PyPI as part of the
+  # client-side install flow. We don't need a build step beyond ``pip install``.
+  dockerfile: Dockerfile

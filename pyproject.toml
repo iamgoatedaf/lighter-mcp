@@ -1,21 +1,48 @@
 [project]
 name = "lighter-mcp"
 version = "0.1.0"
-description = "Portable MCP server exposing Lighter trading tools across Cursor, Claude, Codex, OpenClaw, and generic MCP clients."
+description = "Safety-first MCP server exposing Lighter perpetual-DEX trading to AI agents (Cursor, Claude, Codex, Claude Desktop, OpenClaw)."
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
 authors = [
     { name = "Lighter MCP Toolkit" },
 ]
-keywords = ["lighter", "mcp", "trading", "perpetuals", "defi", "agents"]
+maintainers = [
+    { name = "Lighter MCP Toolkit" },
+]
+keywords = [
+    "lighter",
+    "mcp",
+    "model-context-protocol",
+    "trading",
+    "perpetuals",
+    "perp",
+    "dex",
+    "defi",
+    "agents",
+    "ai-agent",
+    "cursor",
+    "claude",
+    "codex",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
+    "Environment :: Console",
     "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
 ]
 dependencies = [
     "mcp>=1.2",
@@ -36,7 +63,7 @@ Homepage      = "https://github.com/iamgoatedaf/lighter-mcp"
 Source        = "https://github.com/iamgoatedaf/lighter-mcp"
 Issues        = "https://github.com/iamgoatedaf/lighter-mcp/issues"
 Changelog     = "https://github.com/iamgoatedaf/lighter-mcp/blob/main/CHANGELOG.md"
-Documentation = "https://github.com/iamgoatedaf/lighter-mcp/blob/main/README.md"
+Documentation = "https://lighter-mcp.mintlify.app"
 
 [project.scripts]
 lighter-mcp = "lighter_mcp.server:main"
@@ -47,6 +74,32 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["lighter_mcp"]
+
+# Ship adapter scaffolds and config templates inside the wheel so
+# ``lighter-mcp init`` works after ``pipx install`` / ``uvx`` / ``brew install``
+# without needing the source repo.
+[tool.hatch.build.targets.wheel.force-include]
+"adapters" = "lighter_mcp/_data/adapters"
+"configs"  = "lighter_mcp/_data/configs"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "lighter_mcp",
+    "adapters",
+    "configs",
+    "tests",
+    "docs",
+    "examples",
+    "README.md",
+    "CHANGELOG.md",
+    "DISCLAIMER.md",
+    "LICENSE",
+    "SECURITY.md",
+    "install.sh",
+    "Dockerfile",
+    "smithery.yaml",
+    "ROADMAP.md",
+]
 
 [tool.ruff]
 line-length = 100

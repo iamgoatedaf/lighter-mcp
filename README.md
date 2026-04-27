@@ -43,22 +43,81 @@ without going through these layers.
 
 ## Quick start
 
+One command, end to end:
+
 ```bash
-# 1. Get the official kit (one-time)
-git clone https://github.com/elliottech/lighter-agent-kit ~/lighter-agent-kit
-cd ~/lighter-agent-kit && bash install.sh   # follow its README
-
-# 2. Install lighter-mcp + a default readonly config
-git clone https://github.com/iamgoatedaf/lighter-mcp
-cd lighter-mcp
-bash install.sh --kit-path ~/lighter-agent-kit
-
-# 3. (Optional) install the Cursor adapter into your project
-INSTALL_ADAPTER_TARGET=/path/to/your/project \
-  bash install.sh --kit-path ~/lighter-agent-kit --adapter cursor --no-doctor
+pipx install lighter-mcp && lighter-mcp init
 ```
 
-After step 2, `lighter-mcp doctor` should print a green health envelope.
+`lighter-mcp init` clones the upstream `lighter-agent-kit` into
+`~/.lighter/lighter-agent-kit`, writes a default **readonly** config to
+`~/.lighter/lighter-mcp/config.toml`, and auto-wires every MCP-capable
+agent it finds locally — Cursor, Claude Code, Claude Desktop, Codex —
+including slash-commands, the `lighter-trader` sub-agent, and the
+post-trade hook. Restart your agent and try:
+
+> /lighter-status
+
+That's it. Live trading stays OFF until you flip it on in the config and
+re-run `lighter-mcp doctor`.
+
+### Other ways to install
+
+<details>
+<summary><b>uvx (zero install, ephemeral)</b></summary>
+
+```bash
+uvx lighter-mcp init
+```
+
+</details>
+
+<details>
+<summary><b>Homebrew (macOS / Linux)</b></summary>
+
+```bash
+brew install iamgoatedaf/tap/lighter-mcp
+lighter-mcp init
+```
+
+</details>
+
+<details>
+<summary><b>Docker</b></summary>
+
+```bash
+docker run --rm -it -v ~/.lighter:/data \
+    ghcr.io/iamgoatedaf/lighter-mcp \
+    lighter-mcp init --no-scaffolds
+```
+
+The image ships with the kit pre-cloned and runs `lighter-mcp serve` on
+`:8791` by default.
+
+</details>
+
+<details>
+<summary><b>Smithery (auto-wires Claude Desktop / Cursor / Continue / Cline)</b></summary>
+
+```bash
+npx -y @smithery/cli install @iamgoatedaf/lighter-mcp --client claude
+```
+
+</details>
+
+<details>
+<summary><b>From source (development)</b></summary>
+
+```bash
+git clone https://github.com/iamgoatedaf/lighter-mcp
+cd lighter-mcp
+python3 -m venv .venv && .venv/bin/pip install -e ".[dev,http]"
+.venv/bin/lighter-mcp init
+```
+
+</details>
+
+After any path above, `lighter-mcp doctor` should print a green health envelope.
 
 ## Modes and tools
 
