@@ -19,8 +19,8 @@ Combined health check.
   "version": "0.1.0",
   "mode": "live",
   "host": "https://mainnet.zklighter.elliot.ai",
-  "kit_path": "/Users/you/lighter-agent-kit",
-  "kit_python": "/Users/you/lighter-agent-kit/.venv/bin/python",
+  "kit_path": "/Users/you/.lighter/lighter-agent-kit",
+  "kit_python": "/Users/you/.lighter/lighter-agent-kit/.venv/bin/python",
   "audit_log": "/Users/you/.lighter/lighter-mcp/audit.jsonl",
   "system": { "code": 200, "status": "ok", "block_height": 998765 },
   "auth": {
@@ -46,7 +46,7 @@ Server version + active config summary + safety snapshot.
 {
   "version": "0.1.0",
   "mode": "live",
-  "kit_path": "/Users/you/lighter-agent-kit",
+  "kit_path": "/Users/you/.lighter/lighter-agent-kit",
   "host": "https://mainnet.zklighter.elliot.ai",
   "config_source": "/Users/you/.lighter/lighter-mcp/config.toml",
   "safety": {
@@ -106,8 +106,8 @@ do this right now?" before composing a write.
 lighter-mcp doctor
 
 # 2. Auth (no MCP needed)
-~/lighter-agent-kit/.venv/bin/python \
-   ~/lighter-agent-kit/scripts/query.py auth status
+~/.lighter/lighter-agent-kit/.venv/bin/python \
+   ~/.lighter/lighter-agent-kit/scripts/query.py auth status
 
 # 3. Tail recent failures from the audit log
 jq 'select(.ok==false)' ~/.lighter/lighter-mcp/audit.jsonl | tail -n 5

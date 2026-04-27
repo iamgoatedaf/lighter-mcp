@@ -19,35 +19,39 @@ kit does not have on its own:
 
 ## Install
 
-The server itself is one Python package; it shells out to a separate
-`lighter-agent-kit` checkout for the actual signing.
+One command, end to end:
 
-```bash Shell
-git clone https://github.com/elliottech/lighter-agent-kit ~/lighter-agent-kit
-cd ~/lighter-agent-kit && bash install.sh
-
-git clone https://github.com/iamgoatedaf/lighter-mcp
-bash lighter-mcp/install.sh --kit-path ~/lighter-agent-kit
+```bash
+pipx install lighter-mcp && lighter-mcp init
 ```
 
-By default `install.sh` writes a `~/.lighter-mcp/config.toml` with
-`mode = "readonly"`. That gives you the 18 read-only and diagnostics
-tools and never touches a private key.
+`lighter-mcp init` clones the upstream `lighter-agent-kit`, writes a
+default `~/.lighter/lighter-mcp/config.toml` in `readonly` mode, and
+auto-wires every MCP-capable agent it finds locally — Cursor, Claude
+Code, Claude Desktop, Codex — including slash-commands, the
+`lighter-trader` sub-agent, and the post-trade hook. Restart your
+agent and try `/lighter-status`.
 
-If you want the simulator, live orders, or withdrawals, see
-[Modes & safety](/get-started/modes-and-safety).
+Live trading stays OFF until you flip it on in the config and re-run
+`lighter-mcp doctor`. See [Modes & safety](/get-started/modes-and-safety).
+
+Alternative install paths (`uvx`, Docker, source) are documented on
+the [Installation](/get-started/installation) page.
 
 ## Run
 
-```bash Shell
-lighter-mcp serve
+The MCP server is launched automatically by your agent over stdio.
+For standalone or daemon use:
+
+```bash
+lighter-mcp stdio                                # default, used by agents
+lighter-mcp serve --host 127.0.0.1 --port 8791   # streamable HTTP
 ```
 
-The process speaks MCP over stdio and exposes a tool catalog that
-depends on the configured mode. Connect it from your agent using one of
-the [adapters](/adapters/overview) — there are pre-built setups for
-Cursor, Claude Code, Claude Desktop, Codex, and OpenClaw, plus a
-generic MCP client recipe.
+Connect it from your agent using one of the
+[adapters](/adapters/overview) — pre-built setups for Cursor, Claude
+Code, Claude Desktop, Codex, and OpenClaw, plus a generic MCP client
+recipe.
 
 ## Modes at a glance
 

@@ -5,38 +5,35 @@ description: "Add Lighter MCP to Anthropic's Claude Code CLI agent with SKILL.md
 
 The Claude Code adapter ships:
 
-- An MCP entry in `~/.claude/claude_code_config.json`.
-- `SKILL.md` that primes Claude on the Lighter workflow.
+- An MCP entry in `~/.claude/mcp.json`.
 - The shared slash commands and `lighter-trader` sub-agent.
-- A pre-tool hook (optional) for caps enforcement.
+- A post-tool-call hook for the audit notifications log.
 
 ## Install
 
 ```bash
-bash install.sh --kit-path ~/lighter-agent-kit --adapter claude
+lighter-mcp init --agents claude-code
 ```
 
-For a project-local install:
-
-```bash
-INSTALL_ADAPTER_TARGET=/path/to/your/project \
-  bash install.sh --kit-path ~/lighter-agent-kit --adapter claude --no-doctor
-```
+The installer patches `~/.claude/mcp.json` and drops scaffolds under
+`~/.claude/`. Re-running is idempotent.
 
 ## What gets written
 
 ```
 ~/.claude/
-└── claude_code_config.json      # adds the lighter-mcp MCP entry
-
-<project>/.claude/
-├── SKILL.md                     # Claude Code skill (auto-loaded)
-├── commands/lighter-*.md
-├── agents/lighter-trader.md
-└── hooks/lighter-pre-tool.json
+├── mcp.json                     # adds the "lighter" entry under mcpServers
+├── commands/lighter-*.md        # 5 slash commands
+├── agents/lighter-trader.md     # sub-agent definition
+└── hooks/post-tool-call.sh      # logs each lighter_(live|funds)_* call
 ```
 
-## claude_code_config.json entry
+The `SKILL.md` agent contract lives at
+`adapters/claude/skill/SKILL.md` in the source repo — drop it under
+`~/.claude/skills/lighter/` if you want it auto-attached on every
+Claude Code session.
+
+## mcp.json entry
 
 ```json
 {
@@ -45,12 +42,15 @@ INSTALL_ADAPTER_TARGET=/path/to/your/project \
       "command": "lighter-mcp",
       "args": ["stdio"],
       "env": {
-        "LIGHTER_KIT_PATH": "/Users/you/lighter-agent-kit"
+        "LIGHTER_MCP_CONFIG": "/Users/you/.lighter/lighter-mcp/config.toml"
       }
     }
   }
 }
 ```
+
+`LIGHTER_MCP_CONFIG` is the only env var the server needs — kit path,
+mode, and safety caps all live inside the TOML.
 
 ## Reload
 
@@ -70,10 +70,8 @@ The agent should call `lighter_safety_status` and reply.
 
 ## Notes
 
-- Claude Code respects `SKILL.md` automatically — it doesn't need to be
-  added anywhere else.
 - The `lighter-trader` sub-agent is invoked with `@lighter-trader` and
   has its own narrow tool budget — it cannot edit your source files.
-- Hooks are scoped to the project containing `.claude/hooks/`. They are
+- Hooks land in `~/.claude/hooks/post-tool-call.sh`. They are
   best-effort; the MCP server's own gates remain the authoritative
   safety boundary.

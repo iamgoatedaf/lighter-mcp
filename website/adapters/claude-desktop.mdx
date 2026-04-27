@@ -9,7 +9,18 @@ is therefore minimal: the MCP tools are available in any conversation
 where the project rules permit it, and you paste the SKILL into a
 custom project to prime the agent.
 
-## Configure the MCP server
+## Install (auto)
+
+```bash
+lighter-mcp init --agents claude-desktop
+```
+
+The installer locates `claude_desktop_config.json` for your platform
+and adds the `lighter` entry under `mcpServers` with the right env
+vars and absolute paths. If it succeeds, skip ahead to **Restart
+Claude**.
+
+## Configure the MCP server (manual)
 
 Edit `claude_desktop_config.json`:
 
@@ -29,19 +40,21 @@ Edit `claude_desktop_config.json`:
 {
   "mcpServers": {
     "lighter": {
-      "command": "lighter-mcp",
+      "command": "/Users/you/.local/bin/lighter-mcp",
       "args": ["stdio"],
       "env": {
-        "LIGHTER_KIT_PATH": "/Users/you/lighter-agent-kit"
+        "LIGHTER_MCP_CONFIG": "/Users/you/.lighter/lighter-mcp/config.toml"
       }
     }
   }
 }
 ```
 
-If `lighter-mcp` is not on the global PATH (e.g. it's in
-`~/.lighter/lighter-mcp/venv/bin/lighter-mcp`), use the absolute path
-in `command`.
+Use the absolute path returned by `which lighter-mcp` for `command` —
+Claude Desktop launches the server outside your shell and the regular
+`PATH` may not be set. The single env var `LIGHTER_MCP_CONFIG` is all
+the server needs; kit path, mode, and safety caps live inside the
+TOML.
 
 ## Restart Claude
 

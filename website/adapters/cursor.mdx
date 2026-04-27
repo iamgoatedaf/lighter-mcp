@@ -13,17 +13,16 @@ The Cursor adapter wires up:
 
 ## Install
 
-From the repo root:
-
 ```bash
-bash install.sh --kit-path ~/lighter-agent-kit --adapter cursor
+lighter-mcp init --agents cursor
 ```
 
-To install only into one project (instead of the global Cursor profile):
+That's it. The installer patches `~/.cursor/mcp.json`, drops scaffolds
+into your home directory, and runs `lighter-mcp doctor`. To wire a
+specific project instead of the user-global profile:
 
 ```bash
-INSTALL_ADAPTER_TARGET=/path/to/your/project \
-  bash install.sh --kit-path ~/lighter-agent-kit --adapter cursor --no-doctor
+lighter-mcp init --agents cursor --project-dir /path/to/your/project
 ```
 
 The installer is idempotent — re-run it after upgrades.
@@ -32,15 +31,14 @@ The installer is idempotent — re-run it after upgrades.
 
 ```
 ~/.cursor/
-├── mcp.json                     # adds the lighter-mcp entry
-└── rules/                       # global rules (only if --global)
+└── mcp.json                     # adds the "lighter" entry under mcpServers
 
-<project>/.cursor/
-├── mcp.json                     # per-project mcp config (recommended)
-├── rules/lighter.mdc            # Cursor rule
-├── commands/lighter-*.md        # slash commands
-├── agents/lighter-trader.md     # sub-agent definition
-└── hooks/lighter-pre-tool.json  # pre-tool guard
+~/.cursor/                       # or <project>/.cursor/ with --project-dir
+├── rules/lighter-safety.mdc     # safety rule auto-loaded by Cursor
+├── hooks.json                   # post-tool-call hook config
+├── hooks/after-lighter-trade.sh # hook script (logs + macOS notify)
+├── commands/lighter-*.md        # 5 slash commands
+└── agents/lighter-trader.md     # sub-agent definition
 ```
 
 ## mcp.json entry
@@ -52,12 +50,17 @@ The installer is idempotent — re-run it after upgrades.
       "command": "lighter-mcp",
       "args": ["stdio"],
       "env": {
-        "LIGHTER_KIT_PATH": "/Users/you/lighter-agent-kit"
+        "LIGHTER_MCP_CONFIG": "/Users/you/.lighter/lighter-mcp/config.toml"
       }
     }
   }
 }
 ```
+
+The single env var the server needs is `LIGHTER_MCP_CONFIG` — the kit
+path, mode, and safety caps all live inside that TOML file. If
+`lighter-mcp` isn't on `PATH` (rare with `pipx install`), use the
+absolute path returned by `which lighter-mcp` as `command`.
 
 ## Reload after config changes
 
@@ -72,9 +75,9 @@ After Cursor reloads, open the chat panel and run:
 ```
 
 You should see the active mode, daily-notional remaining, equity, and
-open orders. If the slash command isn't recognized, the adapter files
-landed in the wrong directory — re-run the installer with
-`INSTALL_ADAPTER_TARGET` set to your project root.
+open orders. If the slash command isn't recognised, re-run
+`lighter-mcp init --agents cursor` with `--project-dir` pointing at the
+workspace where you opened Cursor.
 
 ## Tips
 

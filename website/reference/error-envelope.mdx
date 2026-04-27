@@ -58,8 +58,8 @@ Issued whenever `ConfirmationStore.consume()` rejects a token. See
   "error": "kit script query.py exited with code 2",
   "script": "query.py",
   "argv": [
-    "/Users/you/lighter-agent-kit/.venv/bin/python",
-    "/Users/you/lighter-agent-kit/scripts/query.py",
+    "/Users/you/.lighter/lighter-agent-kit/.venv/bin/python",
+    "/Users/you/.lighter/lighter-agent-kit/scripts/query.py",
     "market", "book", "BTC", "--limit", "10"
   ],
   "exit_code": 2,
@@ -135,8 +135,8 @@ The audit log and error envelope both include the **full argv** the kit
 was invoked with. Copy-paste it into a shell to reproduce faithfully:
 
 ```bash
-/Users/you/lighter-agent-kit/.venv/bin/python \
-   /Users/you/lighter-agent-kit/scripts/query.py \
+/Users/you/.lighter/lighter-agent-kit/.venv/bin/python \
+   /Users/you/.lighter/lighter-agent-kit/scripts/query.py \
    market book BTC --limit 10
 ```
 

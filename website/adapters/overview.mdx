@@ -12,12 +12,15 @@ sub-agents, and platform-specific rules without writing them yourself.
 
 | Platform        | MCP tools | SKILL / system prompt | Slash commands | Sub-agent | Hook | Install                                          |
 | --------------- | :-------: | :-------------------: | :------------: | :-------: | :--: | ------------------------------------------------ |
-| Cursor          | ✅        | rule (`.mdc`)         | ✅             | ✅        | ✅   | `bash install.sh --adapter cursor`               |
-| Claude Code     | ✅        | SKILL.md              | ✅             | ✅        | ✅   | `bash install.sh --adapter claude`               |
-| Codex           | ✅        | SKILL.md              | ✅             | ✅        | ✅   | `bash install.sh --adapter codex`                |
-| Claude Desktop  | ✅        | SKILL paste           | ❌             | ❌        | ❌   | manual                                           |
-| OpenClaw / TG   | ✅        | mapping doc           | bot-side       | ❌        | bot-side | manual                                       |
-| Generic MCP     | ✅        | by hand               | —              | —         | —    | manual                                           |
+| Cursor          | ✅        | rule (`.mdc`)         | ✅             | ✅        | ✅   | `lighter-mcp init --agents cursor`               |
+| Claude Code     | ✅        | SKILL.md              | ✅             | ✅        | ✅   | `lighter-mcp init --agents claude-code`          |
+| Codex           | ✅        | SKILL.md              | ✅             | ✅        | ✅   | `lighter-mcp init --agents codex`                |
+| Claude Desktop  | ✅        | SKILL paste           | ❌             | ❌        | ❌   | `lighter-mcp init --agents claude-desktop`       |
+| OpenClaw / TG   | ✅        | mapping doc           | bot-side       | ❌        | bot-side | manual — see [openclaw](/adapters/openclaw)  |
+| Generic MCP     | ✅        | by hand               | —              | —         | —    | manual — see [generic](/adapters/generic)        |
+
+Run `lighter-mcp init` with no `--agents` flag to wire every detected
+agent at once.
 
 ## Shared UI surfaces
 

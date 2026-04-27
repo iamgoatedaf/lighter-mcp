@@ -3,27 +3,31 @@ title: "Codex"
 description: "Add Lighter MCP to OpenAI Codex via a Codex plugin with SKILL.md, slash commands, and the lighter-trader sub-agent."
 ---
 
-The Codex adapter ships as a **Codex plugin** under
-`adapters/codex/.codex-plugin/plugin.json`. The plugin registers the
-MCP server, the SKILL, the slash commands, and the sub-agent.
+The Codex adapter ships as a **Codex plugin** that registers the MCP
+server, the SKILL, the slash commands, the sub-agent, and the
+post-trade hook.
 
 ## Install
 
 ```bash
-bash install.sh --kit-path ~/lighter-agent-kit --adapter codex
+lighter-mcp init --agents codex
 ```
 
-The installer copies (or symlinks) the plugin into Codex's plugins
-folder. Codex picks it up at next launch.
+The installer lays the plugin out at `~/.codex/plugins/lighter/`,
+generates a `.mcp.json` pointing at your installed `lighter-mcp`
+binary with `LIGHTER_MCP_CONFIG` pre-set, and runs `lighter-mcp doctor`.
+Codex picks the plugin up at next launch.
 
 ## What gets written
 
 ```
-~/.codex/plugins/lighter-mcp/
-├── .codex-plugin/plugin.json    # plugin manifest
-├── SKILL.md
-├── commands/lighter-*.md
-└── agents/lighter-trader.md
+~/.codex/plugins/lighter/
+├── plugin.json                  # plugin manifest
+├── .mcp.json                    # generated server config (paths filled in)
+├── skills/lighter/SKILL.md      # agent-facing safety contract
+├── commands/lighter-*.md        # 5 slash commands (symlinks)
+├── agents/lighter-trader.md     # sub-agent (symlink)
+└── hooks/after-lighter-trade.sh # post-tool-call hook (symlink)
 ```
 
 ## plugin.json sketch
@@ -33,15 +37,27 @@ folder. Codex picks it up at next launch.
   "name": "lighter-mcp",
   "version": "0.1.0",
   "description": "Lighter trading toolkit",
+  "mcp": "./.mcp.json",
+  "skills": ["./skills/lighter/SKILL.md"],
+  "commands": ["./commands"],
+  "agents": ["./agents/lighter-trader.md"],
+  "hooks": { "postToolCall": "./hooks/after-lighter-trade.sh" }
+}
+```
+
+The generated `.mcp.json` looks like:
+
+```json
+{
   "mcpServers": {
     "lighter": {
-      "command": "lighter-mcp",
-      "args": ["stdio"]
+      "command": "/Users/you/.local/bin/lighter-mcp",
+      "args": ["stdio"],
+      "env": {
+        "LIGHTER_MCP_CONFIG": "/Users/you/.lighter/lighter-mcp/config.toml"
+      }
     }
-  },
-  "skills": ["./SKILL.md"],
-  "commands": ["./commands"],
-  "agents": ["./agents/lighter-trader.md"]
+  }
 }
 ```
 

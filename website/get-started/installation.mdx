@@ -1,94 +1,143 @@
 ---
 title: "Installation"
-description: "Install lighter-mcp and the underlying lighter-agent-kit on macOS or Linux in about 5 minutes."
+description: "One-command install on macOS or Linux. lighter-mcp clones the kit, writes a default config, and wires every MCP-capable agent it detects."
 ---
 
 <Note>
-Total time: ~5 minutes. This guide assumes a fresh machine. If you already
-have `lighter-agent-kit` installed, skip to [Step 2](#step-2-install-lighter-mcp).
+Total time: under a minute on a warm machine. The installer is
+idempotent, so re-running it is safe.
 </Note>
 
 ## Prerequisites
 
 <CardGroup cols={2}>
   <Card title="Python 3.10+" icon="python">
-    `python3.11` is recommended. The installer auto-detects whichever interpreter is on `PATH`.
+    `python3.11` or newer is recommended. `pipx` and the install script
+    auto-pick the highest version on `PATH`.
   </Card>
-  <Card title="Node.js (optional)" icon="node-js">
-    Only needed if you plan to edit / preview this docs site locally (Mintlify CLI).
+  <Card title="pipx (recommended)" icon="box-archive">
+    `brew install pipx` on macOS or `python3 -m pip install --user pipx`
+    elsewhere. Optional — see "Other ways" below.
   </Card>
   <Card title="macOS or Linux" icon="apple">
-    Tested on macOS 14+ and Ubuntu 22.04+. Windows works for the server itself but the per-platform adapters use symlinks — run `adapters/_shared/sync.sh` to materialize them.
+    Tested on macOS 14+ and Ubuntu 22.04+. Windows works for the server
+    itself; per-platform adapters need `adapters/_shared/sync.sh` to
+    materialize symlinks.
   </Card>
-  <Card title="A Lighter account" icon="user">
-    For paper / read-only you don't need credentials. For live trading, finish the kit's onboarding to populate `~/.lighter/lighter-agent-kit/credentials`.
+  <Card title="A Lighter account (live only)" icon="user">
+    Paper and read-only modes work without credentials. For live
+    trading, finish the kit's onboarding so
+    `~/.lighter/lighter-agent-kit/credentials` is populated.
   </Card>
 </CardGroup>
 
-## Step 1 — Install lighter-agent-kit
-
-Lighter MCP is a thin wrapper around the official kit, so the kit must
-exist first.
-
-<CodeGroup>
-```bash One-liner
-curl -fsSL https://github.com/elliottech/lighter-agent-kit/releases/latest/download/install.sh | bash
-```
-
-```bash Manual clone
-git clone https://github.com/elliottech/lighter-agent-kit ~/lighter-agent-kit
-cd ~/lighter-agent-kit
-bash install.sh
-```
-</CodeGroup>
-
-The kit installer creates a venv at `~/lighter-agent-kit/.venv/` and pins
-all SDK dependencies. Verify it works:
+## One command
 
 ```bash
-~/lighter-agent-kit/.venv/bin/python ~/lighter-agent-kit/scripts/query.py system status
-# {"code": 200, "status": "ok", ...}
+pipx install lighter-mcp && lighter-mcp init
 ```
 
-## Step 2 — Install lighter-mcp
-
-```bash
-git clone https://github.com/iamgoatedaf/lighter-mcp
-cd lighter-mcp
-bash install.sh --kit-path ~/lighter-agent-kit
-```
+`lighter-mcp init` performs the entire first-time setup end-to-end:
 
 <Steps>
-  <Step title="Locate Python ≥ 3.10">
-    The script picks the highest-version interpreter on `PATH`.
-  </Step>
-  <Step title="Create the MCP venv">
-    Built at `~/.lighter/lighter-mcp/venv/`. Isolated from the kit's venv so dependency upgrades on either side don't collide.
-  </Step>
-  <Step title="Install the package editable">
-    `pip install -e .` so subsequent `git pull`s pick up new tools without reinstalling.
+  <Step title="Install the kit">
+    Clones `lighter-agent-kit` into `~/.lighter/lighter-agent-kit`. If
+    `git` is missing, falls back to a tarball download over HTTPS — no
+    extra binaries required on the host.
   </Step>
   <Step title="Write a default config">
-    A `config.toml` at `~/.lighter/lighter-mcp/config.toml` in `readonly` mode. You promote it later.
+    Creates `~/.lighter/lighter-mcp/config.toml` in `readonly` mode
+    with the kit path and Python interpreter pre-filled. The file is
+    `chmod 600`-ed so other users on the host cannot read it.
+  </Step>
+  <Step title="Wire detected agents">
+    Patches the MCP config of every locally installed agent the
+    detector recognises — Cursor (`~/.cursor/mcp.json`), Claude Code
+    (`~/.claude/mcp.json`), Claude Desktop (platform-specific JSON),
+    and Codex (`~/.codex/plugins/lighter/`). Each entry sets
+    `LIGHTER_MCP_CONFIG` so the server reads your TOML.
+  </Step>
+  <Step title="Drop in slash commands and the sub-agent">
+    Where the agent supports them: copies the five `/lighter-*` slash
+    commands, the `lighter-trader` sub-agent, the post-trade hook, and
+    the Cursor `.mdc` rule.
   </Step>
   <Step title="Run lighter-mcp doctor">
-    A non-interactive smoke check that confirms the kit is reachable and Lighter responds.
+    A non-interactive smoke check that confirms the kit is reachable
+    and Lighter responds. Failure here is non-fatal — the install
+    succeeded, the doctor just couldn't smoke-test it (e.g. on first
+    run the kit needs to self-vendor its SDK deps).
   </Step>
 </Steps>
 
-If `doctor` prints a green health envelope (`{"ok": true, ...}`), you're done.
+## Other ways to install
 
-## Step 3 — Connect your agent
+<CodeGroup>
 
-Pick the adapter that matches your runtime:
+```bash uvx (zero install)
+uvx lighter-mcp init
+```
+
+```bash Docker (GHCR)
+docker pull ghcr.io/iamgoatedaf/lighter-mcp:0.1.0
+docker run --rm -it -v ~/.lighter:/data \
+    ghcr.io/iamgoatedaf/lighter-mcp:0.1.0 \
+    lighter-mcp init --no-scaffolds
+```
+
+```bash From source (development)
+git clone https://github.com/iamgoatedaf/lighter-mcp
+cd lighter-mcp
+python3 -m venv .venv
+.venv/bin/pip install -e ".[dev,http]"
+.venv/bin/lighter-mcp init
+```
+
+```bash Legacy bash install.sh
+git clone https://github.com/iamgoatedaf/lighter-mcp
+cd lighter-mcp
+bash install.sh
+```
+
+</CodeGroup>
+
+The `bash install.sh` path still works for backwards compatibility but
+is a 30-line shim that delegates to `lighter-mcp init`. New users should
+prefer `pipx`.
+
+## Common flags
+
+```bash
+# Wire only specific agents (default: all detected)
+lighter-mcp init --agents cursor
+lighter-mcp init --agents cursor,claude-code
+
+# Initial mode (default: readonly)
+lighter-mcp init --mode paper
+
+# Custom kit / install paths
+lighter-mcp init --kit-path /opt/lighter-agent-kit
+lighter-mcp init --install-root /etc/lighter-mcp
+
+# Re-run safely on an existing setup
+lighter-mcp init --force          # overwrite existing config + reclone kit
+lighter-mcp init --no-doctor      # skip the smoke check
+lighter-mcp init --no-scaffolds   # skip slash-commands / sub-agent / hook
+lighter-mcp init --no-install-kit # require a pre-existing kit at --kit-path
+```
+
+## Step 2 — connect your agent
+
+If `init` detected and patched your agent (`Wired:` in the output), just
+restart it. Otherwise pick a manual path:
 
 <CardGroup cols={3}>
-  <Card title="Cursor" icon="code" href="/adapters/cursor">Adds the MCP server + slash commands + sub-agent + a `.cursor/rules/lighter.mdc` rule file.</Card>
-  <Card title="Claude Code" icon="terminal" href="/adapters/claude-code">CLI agent. SKILL.md + slash commands + lighter-trader sub-agent.</Card>
-  <Card title="Claude Desktop" icon="desktop" href="/adapters/claude-desktop">Hand-edit `claude_desktop_config.json` to point at the MCP server.</Card>
-  <Card title="Codex" icon="laptop-code" href="/adapters/codex">SKILL.md + Codex plugin. Wires up commands and sub-agent.</Card>
-  <Card title="OpenClaw / Telegram" icon="robot" href="/adapters/openclaw">Bot-side mapping doc — UI lives in the bot.</Card>
-  <Card title="Generic MCP" icon="plug" href="/adapters/generic">Any other client. Manual `mcp_servers` entry.</Card>
+  <Card title="Cursor" icon="code" href="/adapters/cursor" />
+  <Card title="Claude Code" icon="terminal" href="/adapters/claude-code" />
+  <Card title="Claude Desktop" icon="desktop" href="/adapters/claude-desktop" />
+  <Card title="Codex" icon="laptop-code" href="/adapters/codex" />
+  <Card title="OpenClaw / Telegram" icon="robot" href="/adapters/openclaw" />
+  <Card title="Generic MCP" icon="plug" href="/adapters/generic" />
 </CardGroup>
 
 ## Verifying
@@ -98,27 +147,32 @@ After connecting, ask your agent:
 > What's the current funding rate for BTC on Lighter?
 
 The agent should call `lighter_market_funding` with `symbol = "BTC"` and
-return the answer. If you get a permission or "tool not found" error,
-double-check that the MCP server is enabled in the agent's config and
-that `lighter-mcp doctor` still passes from the shell.
+return the answer. Or if your agent supports slash commands:
+
+> /lighter-status
+
+If you get a permission or "tool not found" error, double-check that
+the MCP server is enabled in the agent's config and that
+`lighter-mcp doctor` still passes from the shell.
 
 ## Updating
 
 ```bash
-cd /path/to/lighter-mcp && git pull
-~/.lighter/lighter-mcp/venv/bin/pip install -e .
-~/.lighter/lighter-mcp/venv/bin/lighter-mcp doctor
+pipx upgrade lighter-mcp
+lighter-mcp doctor
 ```
 
-The audit log, daily-notional ledger, and config are kept in
-`~/.lighter/lighter-mcp/` and survive reinstalls.
+The audit log, daily-notional ledger, paper-state, and config live in
+`~/.lighter/` and survive package upgrades. To pull a fresh kit
+checkout, re-run `lighter-mcp init --force`.
 
 ## Uninstalling
 
 ```bash
+pipx uninstall lighter-mcp
 rm -rf ~/.lighter/lighter-mcp
-# and remove the lighter-mcp folder you cloned
 ```
 
-The kit (`~/lighter-agent-kit`) is independent — uninstall separately
-if you no longer need it.
+Remove `~/.lighter/lighter-agent-kit/` separately if you no longer need
+the kit. Audit logs, paper state, and credentials all live under
+`~/.lighter/` and are not touched by `pipx uninstall`.

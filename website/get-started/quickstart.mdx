@@ -20,7 +20,7 @@ You should see something like:
 {
   "ok": true,
   "mode": "readonly",
-  "kit_path": "/Users/you/lighter-agent-kit",
+  "kit_path": "/Users/you/.lighter/lighter-agent-kit",
   "host": "https://mainnet.zklighter.elliot.ai",
   "audit_log": "/Users/you/.lighter/lighter-mcp/audit.jsonl",
   "config_source": "/Users/you/.lighter/lighter-mcp/config.toml",
@@ -59,11 +59,11 @@ sequenceDiagram
 
 ## 3. Switch to paper mode
 
-Edit `~/.lighter/lighter-mcp/config.toml`:
+Edit `~/.lighter/lighter-mcp/config.toml` and flip the top-level `mode`
+key (`kit_path` was already filled in by `lighter-mcp init`):
 
 ```toml
 mode = "paper"
-kit_path = "/Users/you/lighter-agent-kit"
 ```
 
 Restart the MCP transport (in Cursor: *Reload MCP servers*; in Claude

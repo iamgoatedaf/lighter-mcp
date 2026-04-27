@@ -15,7 +15,6 @@ server entry can use it.
       "command": "lighter-mcp",
       "args": ["stdio"],
       "env": {
-        "LIGHTER_KIT_PATH": "/Users/you/lighter-agent-kit",
         "LIGHTER_MCP_CONFIG": "/Users/you/.lighter/lighter-mcp/config.toml"
       }
     }
@@ -23,8 +22,16 @@ server entry can use it.
 }
 ```
 
-If `lighter-mcp` is not on the global `PATH`, use the absolute path,
-typically `~/.lighter/lighter-mcp/venv/bin/lighter-mcp`.
+`LIGHTER_MCP_CONFIG` is the only env var you need to point at the
+server's TOML. Kit path, mode, host, and safety caps all live inside
+that file. Run `lighter-mcp init` first if the config does not exist
+yet — that will also set up the kit checkout under
+`~/.lighter/lighter-agent-kit/`.
+
+If `lighter-mcp` is not on the agent's `PATH` (common when the agent
+is launched outside a shell), use the absolute path returned by
+`which lighter-mcp` as `command`. With a `pipx` install that is
+typically `~/.local/bin/lighter-mcp`.
 
 ## Streamable HTTP
 
@@ -65,10 +72,11 @@ method. After connecting, a quick health check:
 { "method": "tools/call", "params": { "name": "lighter_health" } }
 ```
 
-If you get a `kit python or script not found` error, the env vars
-`LIGHTER_KIT_PATH` and/or `LIGHTER_MCP_CONFIG` aren't reaching the
-subprocess. Most clients have a "show server logs" feature — use it
-to confirm the env block was passed through.
+If you get a `kit python or script not found` error, the
+`LIGHTER_MCP_CONFIG` env var isn't reaching the subprocess (or the
+TOML it points at has the wrong `kit_path`). Most clients have a
+"show server logs" feature — use it to confirm the env block was
+passed through.
 
 ## Tool catalog by mode
 
